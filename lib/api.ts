@@ -6,7 +6,7 @@ export const getDashboard = async () => ({
     revenue: "₹2.8L",
     customers: 890,
   },
-  orders: []
+  orders: [],
 })
 
 type LinkedProduct = {
@@ -25,25 +25,49 @@ type InstaPost = {
 
 // ================== PRODUCTS ==================
 export const getProducts = async () => []
-export const createProduct = async () => ({ success: true })
-export const updateProduct = async () => ({ success: true })
-export const deleteProduct = async () => ({ success: true })
-export const bulkUploadJSON = async () => ({ success: true })
-export const uploadExcel = async () => ({ success: true })
+export const createProduct = async (data?: any) => ({ success: true })
+export const updateProduct = async (id?: string, data?: any) => ({ success: true })
+export const deleteProduct = async (id?: string) => ({ success: true })
+export const bulkUploadJSON = async (data?: any) => ({ success: true })
+export const uploadExcel = async (file?: any) => ({ success: true })
 
 // ================== ORDERS ==================
 export const getOrders = async () => []
-export const getOrder = async () => ({})
-export const updateOrderStatus = async () => ({ success: true })
-export const createShipment = async () => ({ success: true })
-export const generateAWB = async () => ({ success: true })
-export const getLabel = async () => ({ success: true })
-export const cancelShipment = async () => ({ success: true })
+export const getOrder = async (id?: string) => ({})
+
+export const updateOrderStatus = async (
+  id: string,
+  data: { status: string; trackingUrl?: string }
+) => {
+  console.log("Updating order:", id, data)
+  return { success: true }
+}
+
+export const createShipment = async (data: { orderId: string }) => {
+  console.log("Create shipment:", data)
+  return { success: true }
+}
+
+export const generateAWB = async (data: { shiprocketOrderId: string }) => {
+  console.log("Generate AWB:", data)
+  return { success: true }
+}
+
+export const getLabel = async (data: { awb: string }) => {
+  console.log("Get label:", data)
+  return { success: true }
+}
+
+export const cancelShipment = async (data: { awb: string }) => {
+  console.log("Cancel shipment:", data)
+  return { success: true }
+}
 
 // ================== USERS ==================
 export const getUsers = async () => []
-export const getUser = async () => ({})
-export const changeUserRole = async () => ({ success: true })
+export const getUser = async (id?: string) => ({})
+export const changeUserRole = async (id?: string, role?: string) => ({ success: true })
+
 // ================== INSTA LIVE ==================
 
 let MOCK_DB: InstaPost[] = [
@@ -103,8 +127,7 @@ export const unlinkProduct = async (postId: string, productId: string) => {
   const post = MOCK_DB.find(p => p.id === postId)
   if (!post) return { success: false }
 
- post.products = post.products.filter(p => p.id !== productId)
-
+  post.products = post.products.filter(p => p.id !== productId)
   return { success: true }
 }
 
@@ -121,7 +144,7 @@ export const searchProducts = async (query: string) => {
     p.name.toLowerCase().includes(query.toLowerCase())
   )
 
- return { products: filtered }
+  return { products: filtered }
 }
 
 // ================== UPLOAD ==================
