@@ -3,6 +3,32 @@ import { useEffect, useState, useCallback } from 'react'
 import { getProducts, createProduct, updateProduct, deleteProduct, bulkUploadJSON, uploadExcel } from '@/lib/api'
 import { Modal, Confirm, Toggle, StockBadge, SkeletonRows, Pagination, UploadZone, toast } from '@/components/admin/ui'
 
+
+type Product = {
+  id: string
+  code: string
+  name: string
+  category: string
+  brand: string
+  price: number
+  stock: number
+  images: unknown[]
+  is_active: boolean
+  subcategory?: string
+  color?: string
+  size?: string
+  barcode?: string
+}
+
+type ExcelResult = {
+  created?: number
+  updated?: number
+  failed?: number
+  parseErrors?: number
+  failedRows?: { row: number; reason: string }[]
+}
+
+
 const MOCK_PRODUCTS = [
   { id:'1', code:'TFM-001', name:'Silk Blend Saree',       category:'Sarees',    brand:'Silk Palace', price:1299, stock:0,  images:[], is_active:false },
   { id:'2', code:'TFM-002', name:'Embroidered Kurti Set',  category:'Kurtis',    brand:'Cotton King', price:699,  stock:3,  images:[], is_active:true  },
@@ -20,21 +46,25 @@ const PROD_EMOJIS: Record<string,string> = { Sarees:'🥻', Kurtis:'👗', 'Kids
 const emptyForm = { name:'', category:'', subcategory:'', brand:'', price:'', stock:'', color:'', size:'', barcode:'', is_active:true }
 
 export default function ProductsPage() {
-  const [products, setProducts]   = useState(MOCK_PRODUCTS)
+  const [products, setProducts] = useState<Product[]>(MOCK_PRODUCTS)
+
+  const [editItem, setEditItem] = useState<Product | null>(null)
+
+  const [deleteItem, setDeleteItem] = useState<Product | null>(null)
+
+  const [excelResult, setExcelResult] = useState<ExcelResult | null>(null)
   const [loading, setLoading]     = useState(false)
   const [search, setSearch]       = useState('')
   const [catFilter, setCatFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
   const [page, setPage]           = useState(1)
   const [addOpen, setAddOpen]     = useState(false)
-  const [editItem, setEditItem]   = useState<any>(null)
+
   const [form, setForm]           = useState(emptyForm)
   const [formErrors, setFormErrors] = useState<Record<string,string>>({})
-  const [deleteItem, setDeleteItem] = useState<any>(null)
   const [bulkOpen, setBulkOpen]   = useState(false)
   const [bulkJSON, setBulkJSON]   = useState('')
   const [excelOpen, setExcelOpen] = useState(false)
-  const [excelResult, setExcelResult] = useState<any>(null)
   const [saving, setSaving]       = useState(false)
 
   // Filter
@@ -48,7 +78,7 @@ export default function ProductsPage() {
   const PER_PAGE = 20
   const paged = filtered.slice((page-1)*PER_PAGE, page*PER_PAGE)
 
-  function fset(k: string, v: any) { setForm(f => ({ ...f, [k]: v })) }
+  function fset(k: keyof typeof form, v: any) { setForm(f => ({ ...f, [k]: v })) }
 
   function validate() {
     const errs: Record<string,string> = {}
@@ -77,7 +107,7 @@ export default function ProductsPage() {
     setSaving(false)
   }
 
-  function openEdit(p: any) {
+  function openEdit(p: Product) {
     setForm({ name:p.name, category:p.category, subcategory:p.subcategory||'', brand:p.brand||'', price:String(p.price), stock:String(p.stock), color:p.color||'', size:p.size||'', barcode:p.barcode||'', is_active:p.is_active })
     setEditItem(p); setAddOpen(true)
   }
@@ -85,29 +115,32 @@ export default function ProductsPage() {
   async function handleDelete() {
     if (!deleteItem) return
     try { await deleteProduct(deleteItem.id); setProducts(ps => ps.filter(p => p.id !== deleteItem.id)); toast('Product deleted', 'success') }
-    catch (e: any) { toast(e.message, 'error') }
+    catch (e: any) { toast(e?.message || 'Something went wrong', 'error') }
   }
 
   async function handleBulkJSON() {
     try { JSON.parse(bulkJSON) } catch { toast('Invalid JSON', 'error'); return }
     try { await bulkUploadJSON(JSON.parse(bulkJSON)); toast('Bulk upload submitted', 'success'); setBulkOpen(false) }
-    catch (e: any) { toast(e.message, 'error') }
+    catch (e: any) { toast(e?.message || 'Something went wrong', 'error') }
   }
 
   async function handleExcelFile(file: File) {
     try {
-      const result = await uploadExcel(file)
+      const result = await uploadExcel(file) as ExcelResult
       setExcelResult(result)
-      toast(`Created ${result.created}, Updated ${result.updated}`, 'success')
-    } catch (e: any) { toast(e.message, 'error') }
+      toast(
+  `Created ${result.created ?? 0}, Updated ${result.updated ?? 0}`,
+  'success'
+)
+    } catch (e: any) { toast(e?.message || 'Something went wrong', 'error') }
   }
 
-  async function toggleActive(p: any) {
+  async function toggleActive(p: Product) {
     try {
       await updateProduct(p.id, { is_active: !p.is_active })
       setProducts(ps => ps.map(x => x.id === p.id ? { ...x, is_active: !x.is_active } : x))
       toast('Status updated', 'success')
-    } catch (e: any) { toast(e.message, 'error') }
+    } catch (e: any) { toast(e?.message || 'Something went wrong', 'error') }
   }
 
   return (
@@ -152,7 +185,7 @@ export default function ProductsPage() {
                 ? <SkeletonRows cols={9} />
                 : paged.length === 0
                   ? <tr><td colSpan={9} style={{ textAlign:'center', padding:40, color:'var(--ink-5)' }}>No products found</td></tr>
-                  : paged.map(p => (
+                  : paged.map((p: Product) => (
                     <tr key={p.id} style={{ background: p.stock === 0 ? 'rgba(254,240,240,.4)' : undefined }}>
                       <td>
                         <div className="prod-thumb" style={{ background: p.stock === 0 ? '#FEF0F0' : 'var(--cream-2)' }}>
@@ -278,27 +311,27 @@ export default function ProductsPage() {
           <div style={{ marginTop:16 }}>
             <div className="excel-result-grid">
               <div className="excel-result-box" style={{ background:'#DCFCE7' }}>
-                <div className="excel-result-val" style={{ color:'#14532D' }}>{excelResult.created}</div>
+                <div className="excel-result-val" style={{ color:'#14532D' }}>{excelResult.created ?? 0}</div>
                 <div className="excel-result-lbl" style={{ color:'#166534' }}>✓ Created</div>
               </div>
               <div className="excel-result-box" style={{ background:'#DBEAFE' }}>
-                <div className="excel-result-val" style={{ color:'#1E3A8A' }}>{excelResult.updated}</div>
+                <div className="excel-result-val" style={{ color:'#1E3A8A' }}>{excelResult.updated ?? 0}</div>
                 <div className="excel-result-lbl" style={{ color:'#1D4ED8' }}>↻ Updated</div>
               </div>
               <div className="excel-result-box" style={{ background:'#FEE2E2' }}>
-                <div className="excel-result-val" style={{ color:'#7F1D1D' }}>{excelResult.failed}</div>
+                <div className="excel-result-val" style={{ color:'#7F1D1D' }}>{excelResult.failed ?? 0}</div>
                 <div className="excel-result-lbl" style={{ color:'#991B1B' }}>✕ Failed</div>
               </div>
               <div className="excel-result-box" style={{ background:'#FFF7ED' }}>
-                <div className="excel-result-val" style={{ color:'#7C2D12' }}>{excelResult.parseErrors}</div>
+                <div className="excel-result-val" style={{ color:'#7C2D12' }}>{excelResult.parseErrors ?? 0}</div>
                 <div className="excel-result-lbl" style={{ color:'#C2410C' }}>⚠ Parse Errors</div>
               </div>
             </div>
-            {excelResult.failedRows?.length > 0 && (
+            {excelResult.failedRows && excelResult.failedRows.length > 0&& (
               <div style={{ marginTop:10 }}>
                 <div className="section-title">Failed Rows</div>
                 <table><thead><tr><th>Row</th><th>Issue</th></tr></thead>
-                <tbody>{excelResult.failedRows.map((r: any, i: number) => <tr key={i}><td>{r.row}</td><td style={{ color:'var(--red)' }}>{r.reason}</td></tr>)}</tbody>
+                <tbody>{excelResult.failedRows.map((r: { row: number; reason: string }, i: number) => <tr key={i}><td>{r.row}</td><td style={{ color:'var(--red)' }}>{r.reason}</td></tr>)}</tbody>
                 </table>
               </div>
             )}

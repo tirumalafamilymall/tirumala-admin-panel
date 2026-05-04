@@ -1,4 +1,27 @@
-// ================== DASHBOARD ==================
+/* ================== TYPES ================== */
+
+type ApiSuccess = { success: true }
+type ApiFail = { success: false; message?: string }
+
+type OrderStatusUpdate = {
+  status: string
+  trackingUrl?: string
+}
+
+type ShipmentPayload = {
+  orderId: string
+}
+
+type AWBPayload = {
+  shiprocketOrderId: string
+}
+
+type LabelPayload = {
+  awb: string
+}
+
+/* ================== DASHBOARD ================== */
+
 export const getDashboard = async () => ({
   stats: {
     products: 1240,
@@ -8,6 +31,127 @@ export const getDashboard = async () => ({
   },
   orders: [],
 })
+
+/* ================== PRODUCTS ================== */
+
+export const getProducts = async () => []
+
+export const createProduct = async (data?: any): Promise<ApiSuccess> => ({
+  success: true,
+})
+
+export const updateProduct = async (
+  id?: string,
+  data?: any
+): Promise<ApiSuccess> => ({
+  success: true,
+})
+
+export const deleteProduct = async (id?: string): Promise<ApiSuccess> => ({
+  success: true,
+})
+
+export const bulkUploadJSON = async (
+  data: any
+): Promise<{
+  success: true
+  created: number
+  updated: number
+}> => {
+  console.log("Bulk upload:", data)
+
+  return {
+    success: true,
+    created: 10,
+    updated: 5,
+  }
+}
+
+export const uploadExcel = async (file: File) => ({
+  success: true,
+  created: 10,
+  updated: 5,
+  failed: 0,
+  parseErrors: 0,
+  failedRows: []
+})
+
+/* ================== ORDERS ================== */
+
+export const getOrders = async () => []
+
+export const getOrder = async (id?: string) => ({
+  id: 'TFM-87291',
+  status: 'DELIVERED',
+  createdAt: '18 Apr 2026',
+  customer: {
+    name: 'Test User',
+    email: 'test@gmail.com',
+    phone: '9999999999',
+  },
+  shippingAddress: {
+    line1: 'Test Address',
+    city: 'City',
+    state: 'State',
+    pincode: '000000',
+    phone: '9999999999',
+  },
+  items: [],
+  amount: 1000,
+  paymentMethod: 'ONLINE',
+  paymentStatus: 'PAID',
+})
+
+export const updateOrderStatus = async (
+  id: string,
+  data: OrderStatusUpdate
+): Promise<ApiSuccess> => {
+  console.log("Update order:", id, data)
+  return { success: true }
+}
+
+export const createShipment = async (
+  data: ShipmentPayload
+): Promise<ApiSuccess> => {
+  console.log("Create shipment:", data)
+  return { success: true }
+}
+
+export const generateAWB = async (
+  data: AWBPayload
+): Promise<ApiSuccess> => {
+  console.log("Generate AWB:", data)
+  return { success: true }
+}
+
+export const getLabel = async (
+  data: LabelPayload
+): Promise<ApiSuccess> => {
+  console.log("Get label:", data)
+  return { success: true }
+}
+
+export const cancelShipment = async (
+  data: LabelPayload
+): Promise<ApiSuccess> => {
+  console.log("Cancel shipment:", data)
+  return { success: true }
+}
+
+/* ================== USERS ================== */
+
+export const getUsers = async () => []
+
+export const getUser = async (id?: string) => ({})
+
+export const changeUserRole = async (
+  id?: string,
+  role?: string
+): Promise<ApiSuccess> => ({
+  success: true,
+})
+
+/* ================== INSTA LIVE ================== */
 
 type LinkedProduct = {
   id: string
@@ -23,75 +167,6 @@ type InstaPost = {
   products: LinkedProduct[]
 }
 
-// ================== PRODUCTS ==================
-export const getProducts = async () => []
-export const createProduct = async (data?: any) => ({ success: true })
-export const updateProduct = async (id?: string, data?: any) => ({ success: true })
-export const deleteProduct = async (id?: string) => ({ success: true })
-export const bulkUploadJSON = async (data?: any) => ({ success: true })
-export const uploadExcel = async (file?: any) => ({ success: true })
-
-// ================== ORDERS ==================
-export const getOrders = async () => []
-export const getOrder = async (id?: string) => {
-  return {
-    id: 'TFM-87291',
-    status: 'DELIVERED',
-    createdAt: '18 Apr 2026 · 2:34 PM',
-    customer: {
-      name: 'Priya Sharma',
-      email: 'test@gmail.com',
-      phone: '+91 9876543210'
-    },
-    shippingAddress: {
-      line1: 'Test',
-      city: 'Test',
-      state: 'Test',
-      pincode: '000000',
-      phone: '1234567890'
-    },
-    items: [],
-    amount: 1000,
-    paymentMethod: 'ONLINE',
-    paymentStatus: 'PAID'
-  }
-}
-
-export const updateOrderStatus = async (
-  id: string,
-  data: { status: string; trackingUrl?: string }
-) => {
-  console.log("Updating order:", id, data)
-  return { success: true }
-}
-
-export const createShipment = async (data: { orderId: string }) => {
-  console.log("Create shipment:", data)
-  return { success: true }
-}
-
-export const generateAWB = async (data: { shiprocketOrderId: string }) => {
-  console.log("Generate AWB:", data)
-  return { success: true }
-}
-
-export const getLabel = async (data: { awb: string }) => {
-  console.log("Get label:", data)
-  return { success: true }
-}
-
-export const cancelShipment = async (data: { awb: string }) => {
-  console.log("Cancel shipment:", data)
-  return { success: true }
-}
-
-// ================== USERS ==================
-export const getUsers = async () => []
-export const getUser = async (id?: string) => ({})
-export const changeUserRole = async (id?: string, role?: string) => ({ success: true })
-
-// ================== INSTA LIVE ==================
-
 let MOCK_DB: InstaPost[] = [
   {
     id: 'il1',
@@ -102,12 +177,10 @@ let MOCK_DB: InstaPost[] = [
   },
 ]
 
-export const getInstaLivePosts = async () => {
-  return MOCK_DB
-}
+export const getInstaLivePosts = async () => MOCK_DB
 
 export const createInstaPost = async (form: any) => {
-  const newPost = {
+  const newPost: InstaPost = {
     id: `il${Date.now()}`,
     ...form,
     products: [],
@@ -128,9 +201,12 @@ export const deleteInstaPost = async (id: string) => {
   return { success: true }
 }
 
-// ================== LINK PRODUCTS ==================
+/* ================== LINK PRODUCTS ================== */
 
-export const linkProduct = async (postId: string, productId: string) => {
+export const linkProduct = async (
+  postId: string,
+  productId: string
+) => {
   const post = MOCK_DB.find(p => p.id === postId)
   if (!post) return { success: false }
 
@@ -145,7 +221,10 @@ export const linkProduct = async (postId: string, productId: string) => {
   return { success: true }
 }
 
-export const unlinkProduct = async (postId: string, productId: string) => {
+export const unlinkProduct = async (
+  postId: string,
+  productId: string
+) => {
   const post = MOCK_DB.find(p => p.id === postId)
   if (!post) return { success: false }
 
@@ -153,7 +232,7 @@ export const unlinkProduct = async (postId: string, productId: string) => {
   return { success: true }
 }
 
-// ================== SEARCH ==================
+/* ================== SEARCH ================== */
 
 export const searchProducts = async (query: string) => {
   const MOCK_PRODUCTS = [
@@ -169,5 +248,7 @@ export const searchProducts = async (query: string) => {
   return { products: filtered }
 }
 
-// ================== UPLOAD ==================
-export const uploadPresign = async () => "https://dummy-url.com/image.jpg"
+/* ================== UPLOAD ================== */
+
+export const uploadPresign = async (): Promise<string> =>
+  "https://dummy-url.com/image.jpg"
