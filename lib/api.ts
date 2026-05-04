@@ -33,7 +33,29 @@ export const uploadExcel = async (file?: any) => ({ success: true })
 
 // ================== ORDERS ==================
 export const getOrders = async () => []
-export const getOrder = async (id?: string) => ({})
+export const getOrder = async (id?: string) => {
+  return {
+    id: 'TFM-87291',
+    status: 'DELIVERED',
+    createdAt: '18 Apr 2026 · 2:34 PM',
+    customer: {
+      name: 'Priya Sharma',
+      email: 'test@gmail.com',
+      phone: '+91 9876543210'
+    },
+    shippingAddress: {
+      line1: 'Test',
+      city: 'Test',
+      state: 'Test',
+      pincode: '000000',
+      phone: '1234567890'
+    },
+    items: [],
+    amount: 1000,
+    paymentMethod: 'ONLINE',
+    paymentStatus: 'PAID'
+  }
+}
 
 export const updateOrderStatus = async (
   id: string,

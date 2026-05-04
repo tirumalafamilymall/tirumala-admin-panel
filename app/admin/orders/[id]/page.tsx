@@ -27,8 +27,9 @@ const STATUS_STEPS: Record<string,number> = {
 }
 
 export default function OrderDetailPage() {
-  const { id } = useParams()
-  const [order, setOrder]           = useState(MOCK_ORDER)
+  const params = useParams()
+  const id = params.id as string
+  const [order, setOrder] = useState<any>(MOCK_ORDER)
   const [loading, setLoading]       = useState(false)
   const [newStatus, setNewStatus]   = useState(MOCK_ORDER.status)
   const [trackingUrl, setTrackingUrl] = useState(MOCK_ORDER.trackingUrl || '')
