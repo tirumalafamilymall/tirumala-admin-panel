@@ -3,15 +3,6 @@ import { useState, useEffect } from 'react'
 import { getInstaLivePosts, createInstaPost, updateInstaPost, deleteInstaPost, linkProduct, unlinkProduct, searchProducts } from '@/lib/api'
 import { Modal, Confirm, Toggle, UploadZone, toast } from '@/components/admin/ui'
 
-const MOCK_POSTS = [
-  { id:'il1', title:'Saree Haul — Apr 18',   instagramUrl:'https://instagram.com/reel/1', thumbnail:'🥻', is_active:true,  products:[{id:'1',name:'Silk Blend Saree',price:1299},{id:'2',name:'Cotton Kurti Set',price:699}] },
-  { id:'il2', title:'Kurti Collection Drop',  instagramUrl:'https://instagram.com/reel/2', thumbnail:'👗', is_active:true,  products:[{id:'3',name:'Cotton Anarkali',price:999}] },
-  { id:'il3', title:'Kids Festive Wear',      instagramUrl:'https://instagram.com/reel/3', thumbnail:'👶', is_active:true,  products:[{id:'4',name:'Kids Lehenga Set',price:799},{id:'2',name:'Girls Frock',price:399}] },
-  { id:'il4', title:"Men's Casual Edit",      instagramUrl:'https://instagram.com/reel/4', thumbnail:'👕', is_active:false, products:[{id:'5',name:"Men's Linen Shirt",price:549}] },
-  { id:'il5', title:'Nightwear Special',      instagramUrl:'https://instagram.com/reel/5', thumbnail:'🌙', is_active:true,  products:[{id:'6',name:'Cotton Nightie',price:449}] },
-  { id:'il6', title:'Summer Sale Live',       instagramUrl:'https://instagram.com/reel/6', thumbnail:'☀️', is_active:true,  products:[] },
-]
-
 const emptyForm = { title:'', instagramUrl:'', is_active:true }
 
 export default function InstaLivePage() {
@@ -48,13 +39,19 @@ async function loadPosts() {
     if (!validate()) return
     setSaving(true)
     try {
+      const payload = {
+        title: form.title || undefined,
+        instagram_url: form.instagramUrl,
+        is_active: form.is_active,
+      }
+
       if (editItem) {
-        await updateInstaPost(editItem.id, form)
-        setPosts(ps => ps.map(p => p.id === editItem.id ? { ...p, ...form } : p))
+        await updateInstaPost(editItem.id, payload)
+        setPosts(ps => ps.map(p => p.id === editItem.id ? { ...p, title: form.title, instagram_url: form.instagramUrl, is_active: form.is_active } : p))
         toast('Post updated', 'success')
       } else {
-        await createInstaPost(form)
-        setPosts(ps => [...ps, { id:`il${Date.now()}`, ...form, thumbnail:'📸', products:[] }])
+        await createInstaPost(payload)
+        setPosts(ps => [...ps, { id:`il${Date.now()}`, title: form.title, instagram_url: form.instagramUrl, is_active: form.is_active, thumbnail:'📸', products:[] }])
         toast('Post created', 'success')
       }
       setAddOpen(false); setEditItem(null); setForm(emptyForm)
@@ -127,7 +124,7 @@ async function loadPosts() {
               </div>
               <div className="insta-actions">
                 <button className="btn btn-xs" onClick={() => {
-                  setForm({ title:p.title||'', instagramUrl:p.instagramUrl, is_active:p.is_active })
+                  setForm({ title:p.title||'', instagramUrl:p.instagram_url, is_active:p.is_active })
                   setEditItem(p); setErrors({}); setAddOpen(true)
                 }}>✏️ Edit</button>
                 <button className="btn btn-xs" onClick={() => { setLinkPostId(p.id); setProdSearch(''); setSearchResults([]) }}>🔗 Products</button>
@@ -137,14 +134,12 @@ async function loadPosts() {
           </div>
         ))}
 
-        {/* Add card */}
         <div className="insta-add-card" onClick={() => { setForm(emptyForm); setEditItem(null); setErrors({}); setAddOpen(true) }}>
           <div className="insta-add-icon">+</div>
           <div className="insta-add-label">New Insta Live Post</div>
         </div>
       </div>
 
-      {/* Add/Edit Modal */}
       <Modal open={addOpen} onClose={() => { setAddOpen(false); setEditItem(null) }}
         title={editItem ? 'Edit Post' : 'New Insta Live Post'}
         footer={<>
@@ -173,7 +168,6 @@ async function loadPosts() {
         </div>
       </Modal>
 
-      {/* Link Products Modal */}
       <Modal open={!!linkPostId} onClose={() => setLinkPostId(null)} title={`Products — ${linkPost?.title || 'Post'}`} wide
         footer={<button className="btn btn-primary" onClick={() => setLinkPostId(null)}>Done</button>}>
         <div className="fgroup" style={{ marginBottom:12 }}>
@@ -184,19 +178,17 @@ async function loadPosts() {
           </div>
         </div>
 
-        {/* Search results */}
         {searchResults.length > 0 && (
           <div style={{ border:'1px solid var(--border)', borderRadius:8, overflow:'hidden', marginBottom:14 }}>
             {searchResults.map((r: any) => (
               <div key={r.id} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'8px 12px', borderBottom:'1px solid rgba(234,216,204,.4)', fontSize:12.5 }}>
-                <span>{r.name} — ₹{r.price.toLocaleString('en-IN')}</span>
+                <span>{r.name} — ₹{(r.base_price ?? 0).toLocaleString('en-IN')}</span>
                 <button className="btn btn-xs btn-green" onClick={() => linkPostId && handleLinkProduct(linkPostId, r)}>+ Link</button>
               </div>
             ))}
           </div>
         )}
 
-        {/* Linked products */}
         <div className="section-title" style={{ marginTop:4 }}>Linked Products ({linkPost?.products.length || 0})</div>
         {linkPost?.products.length === 0
           ? <div style={{ padding:'16px 0', textAlign:'center', color:'var(--ink-5)', fontSize:13 }}>No products linked yet. Search above to link products.</div>
@@ -205,7 +197,7 @@ async function loadPosts() {
                 <div key={p.id} className="linked-prod-row">
                   <div>
                     <span style={{ fontWeight:500 }}>{p.name}</span>
-                    <span style={{ color:'var(--ink-5)', marginLeft:8 }}>₹{p.price.toLocaleString('en-IN')}</span>
+                    <span style={{ color:'var(--ink-5)', marginLeft:8 }}>₹{(p.base_price ?? p.price ?? 0).toLocaleString('en-IN')}</span>
                   </div>
                   <button className="btn btn-xs btn-danger" onClick={() => linkPostId && handleUnlinkProduct(linkPostId, p.id)}>Remove</button>
                 </div>
@@ -213,9 +205,8 @@ async function loadPosts() {
             </div>}
       </Modal>
 
-      {/* Delete Confirm */}
       <Confirm open={!!deleteItem} onClose={() => setDeleteItem(null)} onConfirm={handleDelete}
-        title="Delete Post" message={`Delete &quot;${deleteItem?.title || 'this post'}&quot;? This will remove it from the storefront.`}
+        title="Delete Post" message={`Delete "${deleteItem?.title || 'this post'}"? This will remove it from the storefront.`}
         icon="🗑️" confirmLabel="Yes, Delete" />
     </>
   )

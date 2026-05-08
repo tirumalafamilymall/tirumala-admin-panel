@@ -1,254 +1,133 @@
-/* ================== TYPES ================== */
+import { getAdminToken } from './auth'
 
-type ApiSuccess = { success: true }
-type ApiFail = { success: false; message?: string }
+export const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
-type OrderStatusUpdate = {
-  status: string
-  trackingUrl?: string
-}
+/* ================== CORE FETCH WRAPPER ================== */
 
-type ShipmentPayload = {
-  orderId: string
-}
+async function adminFetch(path: string, options: RequestInit = {}) {
+  const token = getAdminToken()
+  
+  const headers: Record<string, string> = {
+    ...(options.headers as Record<string, string> || {}),
+  }
+  if (token) headers['Authorization'] = `Bearer ${token}`
+  if (!(options.body instanceof FormData)) headers['Content-Type'] = 'application/json'
 
-type AWBPayload = {
-  shiprocketOrderId: string
-}
+  let res = await fetch(`${API_BASE}${path}`, { ...options, headers })
 
-type LabelPayload = {
-  awb: string
+  // Auto-refresh on 401
+  if (res.status === 401) {
+    const { refreshAdminToken } = await import('./auth')
+    const newToken = await refreshAdminToken()
+    if (newToken) {
+      headers['Authorization'] = `Bearer ${newToken}`
+      res = await fetch(`${API_BASE}${path}`, { ...options, headers })
+    }
+  }
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ message: 'Request failed' }))
+    throw new Error(err.message || err.error || `HTTP ${res.status}`)
+  }
+  
+  return res.json()
 }
 
 /* ================== DASHBOARD ================== */
 
-export const getDashboard = async () => ({
-  stats: {
-    products: 1240,
-    orders: 340,
-    revenue: "₹2.8L",
-    customers: 890,
-  },
-  orders: [],
-})
+export const getDashboard = () => adminFetch('/api/admin/dashboard')
 
 /* ================== PRODUCTS ================== */
 
-export const getProducts = async () => []
-
-export const createProduct = async (data?: any): Promise<ApiSuccess> => ({
-  success: true,
-})
-
-export const updateProduct = async (
-  id?: string,
-  data?: any
-): Promise<ApiSuccess> => ({
-  success: true,
-})
-
-export const deleteProduct = async (id?: string): Promise<ApiSuccess> => ({
-  success: true,
-})
-
-export const bulkUploadJSON = async (
-  data: any
-): Promise<{
-  success: true
-  created: number
-  updated: number
-}> => {
-  console.log("Bulk upload:", data)
-
-  return {
-    success: true,
-    created: 10,
-    updated: 5,
+export const getProducts = (params?: Record<string, any>) => {
+  const q = new URLSearchParams()
+  if (params) {
+    Object.entries(params).forEach(([key, val]) => {
+      if (val !== undefined && val !== '') q.set(key, String(val))
+    })
   }
+  return adminFetch(`/api/admin/products?${q}`)
 }
 
-export const uploadExcel = async (file: File) => ({
-  success: true,
-  created: 10,
-  updated: 5,
-  failed: 0,
-  parseErrors: 0,
-  failedRows: []
-})
+export const createProduct = (data: any) => 
+  adminFetch('/api/admin/products', { method: 'POST', body: JSON.stringify(data) })
 
-/* ================== ORDERS ================== */
+export const updateProduct = (id: string, data: any) => 
+  adminFetch(`/api/admin/products/${id}`, { method: 'PATCH', body: JSON.stringify(data) })
 
-export const getOrders = async () => []
+export const deleteProduct = (id: string) => 
+  adminFetch(`/api/admin/products/${id}`, { method: 'DELETE' })
 
-export const getOrder = async (id?: string) => ({
-  id: 'TFM-87291',
-  status: 'DELIVERED',
-  createdAt: '18 Apr 2026',
-  customer: {
-    name: 'Test User',
-    email: 'test@gmail.com',
-    phone: '9999999999',
-  },
-  shippingAddress: {
-    line1: 'Test Address',
-    city: 'City',
-    state: 'State',
-    pincode: '000000',
-    phone: '9999999999',
-  },
-  items: [],
-  amount: 1000,
-  paymentMethod: 'ONLINE',
-  paymentStatus: 'PAID',
-})
+export const bulkUploadJSON = (products: any[]) => 
+  adminFetch('/api/admin/products/bulk', { method: 'POST', body: JSON.stringify(products) })
 
-export const updateOrderStatus = async (
-  id: string,
-  data: OrderStatusUpdate
-): Promise<ApiSuccess> => {
-  console.log("Update order:", id, data)
-  return { success: true }
+export const uploadExcel = (file: File) => {
+  const form = new FormData()
+  form.append('file', file)
+  return adminFetch('/api/admin/products/excel', { method: 'POST', body: form })
 }
 
-export const createShipment = async (
-  data: ShipmentPayload
-): Promise<ApiSuccess> => {
-  console.log("Create shipment:", data)
-  return { success: true }
+export const searchProducts = (query: string) => 
+  adminFetch(`/api/products/search?q=${encodeURIComponent(query)}&limit=10`)
+
+/* ================== ORDERS & SHIPPING ================== */
+
+export const getOrders = (params?: Record<string, any>) => {
+  const q = new URLSearchParams()
+  if (params) {
+    Object.entries(params).forEach(([k, v]) => v !== undefined && q.set(k, String(v)))
+  }
+  return adminFetch(`/api/admin/orders?${q}`)
 }
 
-export const generateAWB = async (
-  data: AWBPayload
-): Promise<ApiSuccess> => {
-  console.log("Generate AWB:", data)
-  return { success: true }
-}
+export const getOrder = (id: string) => adminFetch(`/api/admin/orders/${id}`)
 
-export const getLabel = async (
-  data: LabelPayload
-): Promise<ApiSuccess> => {
-  console.log("Get label:", data)
-  return { success: true }
-}
+export const updateOrderStatus = (id: string, data: { status?: string; tracking_url?: string }) => 
+  adminFetch(`/api/admin/orders/${id}`, { method: 'PATCH', body: JSON.stringify(data) })
 
-export const cancelShipment = async (
-  data: LabelPayload
-): Promise<ApiSuccess> => {
-  console.log("Cancel shipment:", data)
-  return { success: true }
-}
+export const createShipment = (orderId: string) => 
+  adminFetch('/api/shipping/create', { method: 'POST', body: JSON.stringify({ order_id: orderId }) })
+
+export const generateAWB = (orderId: string, shipmentId: string) => 
+  adminFetch('/api/admin/shipping/awb', { method: 'POST', body: JSON.stringify({ order_id: orderId, shipment_id: shipmentId }) })
+
+export const getLabel = (shipmentId: string) => 
+  adminFetch('/api/admin/shipping/label', { method: 'POST', body:JSON.stringify({ shipment_id: shipmentId }) })
 
 /* ================== USERS ================== */
 
-export const getUsers = async () => []
+export const getUsers = (params?: { page?: number; search?: string }) => {
+  const q = new URLSearchParams()
+  if (params?.page) q.set('page', String(params.page))
+  if (params?.search) q.set('search', params.search)
+  return adminFetch(`/api/admin/users?${q}`)
+}
 
-export const getUser = async (id?: string) => ({})
+export const getUser = (id: string) => adminFetch(`/api/admin/users/${id}`)
 
-export const changeUserRole = async (
-  id?: string,
-  role?: string
-): Promise<ApiSuccess> => ({
-  success: true,
-})
+export const changeUserRole = (id: string, role: string) => 
+  adminFetch(`/api/admin/users/${id}/role`, { method: 'PATCH', body: JSON.stringify({ role }) })
 
 /* ================== INSTA LIVE ================== */
 
-type LinkedProduct = {
-  id: string
-  name: string
-  price: number
-}
+export const getInstaLivePosts = () => adminFetch('/api/admin/insta-live')
 
-type InstaPost = {
-  id: string
-  title: string
-  instagramUrl: string
-  is_active: boolean
-  products: LinkedProduct[]
-}
+export const createInstaPost = (data: any) => 
+  adminFetch('/api/admin/insta-live', { method: 'POST', body: JSON.stringify(data) })
 
-let MOCK_DB: InstaPost[] = [
-  {
-    id: 'il1',
-    title: 'Sample Live',
-    instagramUrl: 'https://instagram.com',
-    is_active: true,
-    products: [],
-  },
-]
+export const updateInstaPost = (id: string, data: any) => 
+  adminFetch(`/api/admin/insta-live/${id}`, { method: 'PATCH', body: JSON.stringify(data) })
 
-export const getInstaLivePosts = async () => MOCK_DB
+export const deleteInstaPost = (id: string) => 
+  adminFetch(`/api/admin/insta-live/${id}`, { method: 'DELETE' })
 
-export const createInstaPost = async (form: any) => {
-  const newPost: InstaPost = {
-    id: `il${Date.now()}`,
-    ...form,
-    products: [],
-  }
-  MOCK_DB.push(newPost)
-  return { success: true, post: newPost }
-}
+export const linkProduct = (postId: string, productId: string) => 
+  adminFetch(`/api/admin/insta-live/${postId}/products`, { method: 'POST', body: JSON.stringify({ product_id: productId }) })
 
-export const updateInstaPost = async (id: string, form: any) => {
-  MOCK_DB = MOCK_DB.map(p =>
-    p.id === id ? { ...p, ...form } : p
-  )
-  return { success: true }
-}
+export const unlinkProduct = (postId: string, productId: string) => 
+  adminFetch(`/api/admin/insta-live/${postId}/products`, { method: 'DELETE', body: JSON.stringify({ product_id: productId }) })
 
-export const deleteInstaPost = async (id: string) => {
-  MOCK_DB = MOCK_DB.filter(p => p.id !== id)
-  return { success: true }
-}
+/* ================== UPLOADS ================== */
 
-/* ================== LINK PRODUCTS ================== */
-
-export const linkProduct = async (
-  postId: string,
-  productId: string
-) => {
-  const post = MOCK_DB.find(p => p.id === postId)
-  if (!post) return { success: false }
-
-  if (!post.products.find(p => p.id === productId)) {
-    post.products.push({
-      id: productId,
-      name: `Product ${productId}`,
-      price: 999,
-    })
-  }
-
-  return { success: true }
-}
-
-export const unlinkProduct = async (
-  postId: string,
-  productId: string
-) => {
-  const post = MOCK_DB.find(p => p.id === postId)
-  if (!post) return { success: false }
-
-  post.products = post.products.filter(p => p.id !== productId)
-  return { success: true }
-}
-
-/* ================== SEARCH ================== */
-
-export const searchProducts = async (query: string) => {
-  const MOCK_PRODUCTS = [
-    { id: '1', name: 'Silk Saree', price: 1299 },
-    { id: '2', name: 'Kurti Set', price: 699 },
-    { id: '3', name: 'Anarkali', price: 999 },
-  ]
-
-  const filtered = MOCK_PRODUCTS.filter(p =>
-    p.name.toLowerCase().includes(query.toLowerCase())
-  )
-
-  return { products: filtered }
-}
-
-/* ================== UPLOAD ================== */
-
-export const uploadPresign = async (): Promise<string> =>
-  "https://dummy-url.com/image.jpg"
+export const uploadPresign = (filename: string, contentType: string) => 
+  adminFetch(`/api/upload/presign?filename=${encodeURIComponent(filename)}&type=${encodeURIComponent(contentType)}`)

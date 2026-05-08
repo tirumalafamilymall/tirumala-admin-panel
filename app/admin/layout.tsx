@@ -3,11 +3,12 @@ import './admin.css'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { logoutAdmin } from '@/lib/auth'
+import { logoutAdmin, getAdminToken } from '@/lib/auth'
 
 type User = {
   email: string
   role: 'ADMIN'
+  
 }
 const NAV = [
   { href: '/admin/dashboard', label: 'Dashboard', chip: null,
@@ -22,6 +23,7 @@ const NAV = [
     icon: <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="1" y="3" width="14" height="10" rx="1.5"/><circle cx="8" cy="8" r="2"/></svg> },
 ]
 
+
 const PAGE_TITLES: Record<string, string> = {
   '/admin/dashboard':  'Dashboard',
   '/admin/products':   'Products',
@@ -35,7 +37,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const router = useRouter()
   const [user, setUser] = useState<User | null>(null)
 
-
+useEffect(() => {
+  if (pathname === '/admin/login') return
+  if (!getAdminToken()) {
+    router.replace('/admin/login')
+    return
+  }
+}, [pathname])
 
 
   const pageTitle = PAGE_TITLES[pathname] || pathname.split('/').pop() || 'Admin'

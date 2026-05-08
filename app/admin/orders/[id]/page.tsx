@@ -1,232 +1,201 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
-import {
-  getOrder,
-  updateOrderStatus,
-  createShipment,
-  generateAWB,
-  getLabel,
-  cancelShipment
-} from '@/lib/api'
-import { Badge, Confirm, toast } from '@/components/admin/ui'
+import { getOrder, updateOrderStatus, createShipment, generateAWB, getLabel } from '@/lib/api'
+import { Badge, toast } from '@/components/admin/ui'
+import { Loader2 } from 'lucide-react'
 
-/* ================== TYPES ================== */
 
-type OrderItem = {
-  name: string
-  image: string
-  qty: number
-  price: number
-  total: number
-  variant: string
-}
-
-type Order = {
-  id: string
-  status: string
-  createdAt: string
-  customer: {
-    name: string
-    email: string
-    phone: string
-  }
-  shippingAddress: {
-    line1: string
-    city: string
-    state: string
-    pincode: string
-    phone: string
-  }
-  items: OrderItem[]
-  amount: number
-  paymentMethod: string
-  paymentStatus: string
-  razorpayOrderId?: string
-  razorpayPaymentId?: string
-  shiprocketOrderId?: string
-  awb?: string
-  trackingUrl?: string
-}
-
-/* ================== MOCK ================== */
-
-const MOCK_ORDER: Order = {
-  id: 'TFM-87291',
-  status: 'DELIVERED',
-  createdAt: '18 Apr 2026 · 2:34 PM',
-  customer: {
-    name: 'Priya Sharma',
-    email: 'priya@gmail.com',
-    phone: '+91 9876543210'
-  },
-  shippingAddress: {
-    line1: '123 Main Street',
-    city: 'Tekkali',
-    state: 'Andhra Pradesh',
-    pincode: '532201',
-    phone: '+91 9876543210'
-  },
-  items: [
-    {
-      name: 'Silk Saree',
-      image: '🛍️',
-      qty: 1,
-      price: 1299,
-      total: 1299,
-      variant: 'Red'
-    }
-  ],
-  amount: 1299,
-  paymentMethod: 'ONLINE',
-  paymentStatus: 'PAID',
-  trackingUrl: ''
-}
-
-/* ================== CONSTANTS ================== */
-
-const STEPS = [
-  'Shipment\nCreated',
-  'AWB\nGenerated',
-  'Label\nPrinted',
-  'Out for\nDelivery',
-  'Delivered'
-]
-
-const STATUS_STEPS: Record<string, number> = {
-  PENDING: 0,
-  CONFIRMED: 0,
-  SHIPPED: 3,
-  DELIVERED: 5,
-  CANCELLED: 0
-}
-
-/* ================== COMPONENT ================== */
+const STATUS_OPTIONS = ['PENDING','CONFIRMED','SHIPPED','DELIVERED']
 
 export default function OrderDetailPage() {
-  const params = useParams()
-  const id = params.id as string
+  const params  = useParams()
+  const orderId = params.id as string
 
-  const [order, setOrder] = useState<Order>(MOCK_ORDER)
-  const [newStatus, setNewStatus] = useState(order.status)
-  const [trackingUrl, setTrackingUrl] = useState(order.trackingUrl || '')
-  const [saving, setSaving] = useState(false)
-  const [cancelOpen, setCancelOpen] = useState(false)
-  const [actionLoading, setActionLoading] = useState<string>('')
+  const [order,         setOrder]         = useState<any>(null)
+  const [loading,       setLoading]       = useState(true)
+  const [newStatus,     setNewStatus]     = useState('')
+  const [trackingUrl,   setTrackingUrl]   = useState('')
+  const [saving,        setSaving]        = useState(false)
+  const [actionLoading, setActionLoading] = useState('')
 
-  const doneSteps = STATUS_STEPS[order.status] || 0
-
-  /* ================== ACTIONS ================== */
+  useEffect(() => {
+    getOrder(orderId)
+      .then(res => {
+        const o = res.order ?? res
+        setOrder(o)
+        setNewStatus(o.status)
+        setTrackingUrl(o.tracking_url ?? '')
+      })
+      .catch(() => toast('Failed to load order', 'error'))
+      .finally(() => setLoading(false))
+  }, [orderId])
 
   async function handleStatusSave() {
     setSaving(true)
     try {
-      await updateOrderStatus(order.id, { status: newStatus, trackingUrl })
-
-      setOrder((o: Order) => ({
-        ...o,
-        status: newStatus,
-        trackingUrl
-      }))
-
-      toast('Order status updated', 'success')
-    } catch (e: any) {
-      toast(e?.message || 'Something went wrong', 'error')
-    }
+      await updateOrderStatus(orderId, { status: newStatus, tracking_url: trackingUrl || undefined })
+      setOrder((o: any) => ({ ...o, status: newStatus, tracking_url: trackingUrl }))
+      toast('Order updated', 'success')
+    } catch (e: any) { toast(e?.message || 'Failed', 'error') }
     setSaving(false)
   }
 
   async function handleCreateShipment() {
     setActionLoading('shipment')
-    try {
-      await createShipment({ orderId: order.id })
-      toast('Shipment created!', 'success')
-    } catch (e: any) {
-      toast(e?.message || 'Error', 'error')
+    try { 
+      await createShipment(orderId)
+      const res = await getOrder(orderId)
+      setOrder(res.order ?? res)
+      toast('Shipment created!', 'success') 
     }
+    catch (e: any) { toast(e?.message || 'Error', 'error') }
     setActionLoading('')
   }
 
   async function handleAWB() {
     setActionLoading('awb')
     try {
-      await generateAWB({ shiprocketOrderId: order.shiprocketOrderId || '' })
+      await generateAWB(orderId, order?.shiprocket_shipment_id ?? '')
+      const res = await getOrder(orderId)
+      setOrder(res.order ?? res)
       toast('AWB generated!', 'success')
-    } catch (e: any) {
-      toast(e?.message || 'Error', 'error')
-    }
+    } catch (e: any) { toast(e?.message || 'Error', 'error') }
     setActionLoading('')
   }
 
   async function handleLabel() {
     setActionLoading('label')
     try {
-      await getLabel({ awb: order.awb || '' })
-      toast('Label downloading…', 'success')
-    } catch (e: any) {
-      toast(e?.message || 'Error', 'error')
-    }
+      const res = await getLabel(order?.shiprocket_shipment_id ?? '')
+      if (res.label_url) window.open(res.label_url, '_blank')
+      toast('Label ready', 'success')
+    } catch (e: any) { toast(e?.message || 'Error', 'error') }
     setActionLoading('')
   }
 
-  async function handleCancelShipment() {
-    try {
-      await cancelShipment({ awb: order.awb || '' })
-      toast('Shipment cancelled', 'success')
-    } catch (e: any) {
-      toast(e?.message || 'Error', 'error')
-    }
-  }
+  if (loading) return (
+    <div style={{ display:'flex', justifyContent:'center', padding:60 }}>
+      <Loader2 size={28} className="animate-spin" style={{ color:'var(--ink-5)' }} />
+    </div>
+  )
 
-  /* ================== UI ================== */
+  if (!order) return (
+    <div style={{ textAlign:'center', padding:60, color:'var(--ink-5)' }}>
+      Order not found. <Link href="/admin/orders">← Back</Link>
+    </div>
+  )
+
+  const addr = order.shipping_address ?? {}
 
   return (
     <>
-      <div style={{ display: 'flex', gap: 10 }}>
-        <Link href="/admin/orders">← Back</Link>
-        <span>{order.id}</span>
+      <div style={{ display:'flex', alignItems:'center', gap:10, flexWrap:'wrap' }}>
+        <Link href="/admin/orders" className="btn btn-sm btn-ghost">← Back to Orders</Link>
+        <span style={{ fontFamily:'monospace', fontWeight:700 }}>{order.order_number}</span>
         <Badge status={order.status} />
+        <Badge status={order.payment_status} />
       </div>
 
-      {/* ITEMS */}
-      <div>
-        {order.items.map((item: OrderItem, i: number) => (
-          <div key={i}>
-            {item.name} — ₹{item.price}
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1.4fr', gap:16, alignItems:'start' }}>
+        <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
+          <div className="detail-card">
+            <div className="card-title" style={{ marginBottom:12 }}>Customer</div>
+            <div className="detail-row"><span className="detail-lbl">Name</span><span className="detail-val">{order.user?.name ?? '—'}</span></div>
+            <div className="detail-row"><span className="detail-lbl">Email</span><span className="detail-val">{order.user?.email ?? '—'}</span></div>
+            <div className="detail-row"><span className="detail-lbl">Placed</span><span className="detail-val">{new Date(order.created_at).toLocaleString('en-IN')}</span></div>
+            <div className="detail-row"><span className="detail-lbl">Total</span><span className="detail-val" style={{ fontWeight:700, color:'var(--maroon)' }}>₹{Number(order.total_amount).toLocaleString('en-IN')}</span></div>
           </div>
-        ))}
+
+          <div className="detail-card">
+            <div className="card-title" style={{ marginBottom:12 }}>Shipping Address</div>
+            <div style={{ fontSize:13, color:'var(--ink-3)', lineHeight:1.7 }}>
+              <div style={{ fontWeight:600 }}>{addr.name}</div>
+              <div>{addr.address}</div>
+              <div>{addr.city}, {addr.state} – {addr.pincode}</div>
+              <div>📞 {addr.phone}</div>
+            </div>
+          </div>
+
+          <div className="detail-card">
+            <div className="card-title" style={{ marginBottom:12 }}>Payment</div>
+            <div className="detail-row"><span className="detail-lbl">Status</span><Badge status={order.payment_status} /></div>
+            {order.razorpay_payment_id && <div className="detail-row"><span className="detail-lbl">Payment ID</span><span className="detail-val" style={{ fontFamily:'monospace', fontSize:11 }}>{order.razorpay_payment_id}</span></div>}
+            {order.razorpay_order_id   && <div className="detail-row"><span className="detail-lbl">Razorpay Order</span><span className="detail-val" style={{ fontFamily:'monospace', fontSize:11 }}>{order.razorpay_order_id}</span></div>}
+          </div>
+        </div>
+
+        <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
+          <div className="card">
+            <div className="card-header"><div className="card-title">Items ({order.items?.length ?? 0})</div></div>
+            <div className="tbl-wrap">
+              <table>
+                <thead><tr><th>Product</th><th>Qty</th><th>Price</th><th>Total</th></tr></thead>
+                <tbody>
+                  {(order.items ?? []).map((item: any, i: number) => (
+                    <tr key={i}>
+                      <td>
+                        <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                          {item.image
+                            ? <img src={item.image} style={{ width:36, height:44, objectFit:'cover', borderRadius:6, background:'var(--cream-2)' }} />
+                            : <div style={{ width:36, height:44, borderRadius:6, background:'var(--cream-2)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:18 }}>👗</div>}
+                          <div>
+                            <div style={{ fontWeight:600, fontSize:12.5 }}>{item.name}</div>
+                            {item.size  && <div style={{ fontSize:11, color:'var(--ink-5)' }}>Size: {item.size}</div>}
+                            {item.color && <div style={{ fontSize:11, color:'var(--ink-5)' }}>Color: {item.color}</div>}
+                          </div>
+                        </div>
+                      </td>
+                      <td style={{ textAlign:'center' }}>{item.quantity}</td>
+                      <td>₹{Number(item.price).toLocaleString('en-IN')}</td>
+                      <td style={{ fontWeight:700 }}>₹{(item.price * item.quantity).toLocaleString('en-IN')}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div className="detail-card">
+            <div className="card-title" style={{ marginBottom:12 }}>Update Status</div>
+            <div className="fgroup" style={{ marginBottom:10 }}>
+              <label className="flabel">Order Status</label>
+              <select value={newStatus} onChange={e => setNewStatus(e.target.value)}>
+                {STATUS_OPTIONS.map(s => <option key={s}>{s}</option>)}
+              </select>
+            </div>
+            <div className="fgroup" style={{ marginBottom:12 }}>
+              <label className="flabel">Tracking URL</label>
+              <input className="finput" placeholder="https://shiprocket.co/tracking/…" value={trackingUrl} onChange={e => setTrackingUrl(e.target.value)} />
+            </div>
+            <button className="btn btn-primary" onClick={handleStatusSave} disabled={saving} style={{ width:'100%' }}>
+              {saving ? 'Saving…' : 'Save Changes'}
+            </button>
+          </div>
+
+          <div className="detail-card">
+            <div className="card-title" style={{ marginBottom:12 }}>Shiprocket Actions</div>
+            <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+              <button className="btn btn-primary" onClick={handleCreateShipment} disabled={actionLoading === 'shipment'}>
+                {actionLoading === 'shipment' ? 'Creating…' : '🚚 Create Shipment'}
+              </button>
+              <button className="btn" onClick={handleAWB} disabled={actionLoading === 'awb' || !order.shiprocket_shipment_id}>
+                {actionLoading === 'awb' ? 'Generating…' : '🏷️ Generate AWB'}
+              </button>
+              <button className="btn btn-gold" onClick={handleLabel} disabled={actionLoading === 'label' || !order.shiprocket_shipment_id}>
+                {actionLoading === 'label' ? 'Loading…' : '🖨️ Download Label'}
+              </button>
+            </div>
+            {order.awb && <div style={{ marginTop:10, fontSize:11.5, color:'var(--ink-5)' }}>AWB: {order.awb}</div>}
+            {order.tracking_url && (
+              <a href={order.tracking_url} target="_blank" style={{ display:'block', marginTop:6, fontSize:12, color:'var(--maroon)' }}>
+                Track Shipment →
+              </a>
+            )}
+          </div>
+        </div>
       </div>
-
-      {/* ACTIONS */}
-      <button onClick={handleStatusSave} disabled={saving}>
-        {saving ? 'Saving...' : 'Save Status'}
-      </button>
-
-      <button onClick={handleCreateShipment}>
-        Create Shipment
-      </button>
-
-      <button onClick={handleAWB}>
-        Generate AWB
-      </button>
-
-      <button onClick={handleLabel}>
-        Download Label
-      </button>
-
-      <button onClick={() => setCancelOpen(true)}>
-        Cancel Shipment
-      </button>
-
-      <Confirm
-        open={cancelOpen}
-        onClose={() => setCancelOpen(false)}
-        onConfirm={handleCancelShipment}
-        title="Cancel Shipment"
-        message="This cannot be undone"
-        confirmLabel="Yes"
-      />
     </>
   )
 }
