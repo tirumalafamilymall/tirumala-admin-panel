@@ -100,6 +100,8 @@ export const generateAWB = (orderId: string, shipmentId: string) =>
 export const getLabel = (shipmentId: string) => 
   adminFetch('/api/admin/shipping/label', { method: 'POST', body:JSON.stringify({ shipment_id: shipmentId }) })
 
+export const getShippingQueue = () => adminFetch('/api/admin/shipping')
+
 /* ================== USERS ================== */
 
 export const getUsers = (params?: { page?: number; search?: string }) => {
