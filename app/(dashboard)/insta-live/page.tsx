@@ -195,11 +195,24 @@ export default function InstaLivePage() {
           </div>
         </div>
 
-        {searchResults?.length > 0 && (
+{searchResults?.length > 0 && (
           <div style={{ border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden', marginBottom: 14 }}>
             {searchResults.map((r: any) => (
               <div key={r.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', borderBottom: '1px solid rgba(234,216,204,.4)', fontSize: 12.5 }}>
-                <span>{r.name} — ₹{(r.base_price ?? 0).toLocaleString('en-IN')}</span>
+                
+                {/* Updated this section to show Category cleanly */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                  <span style={{ fontWeight: 500 }}>{r.name}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ fontSize: 10, color: 'var(--ink-5)', background: 'var(--cream-2)', padding: '2px 6px', borderRadius: 4, fontWeight: 600 }}>
+                      {r.category || 'Uncategorized'}
+                    </span>
+                    <span style={{ color: 'var(--ink-4)', fontWeight: 500 }}>
+                      ₹{(r.base_price ?? 0).toLocaleString('en-IN')}
+                    </span>
+                  </div>
+                </div>
+
                 <button className="btn btn-xs btn-green" onClick={() => linkPostId && handleLinkProduct(linkPostId, r)}>+ Link</button>
               </div>
             ))}

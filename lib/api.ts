@@ -44,6 +44,7 @@ async function adminFetch(path: string, options: RequestInit = {}) {
 export const getDashboard = () => adminFetch('/api/admin/dashboard')
 
 /* ================== PRODUCTS ================== */
+export const getCategories = () => adminFetch('/api/admin/categories')
 
 export const getProducts = (params?: Record<string, any>) => {
   const q = new URLSearchParams()

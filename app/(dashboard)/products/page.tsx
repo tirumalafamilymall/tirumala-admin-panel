@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
-import { getProducts, createProduct, updateProduct, deleteProduct, uploadExcel } from '@/lib/api'
+import { getProducts, createProduct, updateProduct, deleteProduct, uploadExcel , getCategories } from '@/lib/api'
 import { getAdminToken } from '@/lib/auth'
 import { API_BASE } from '@/lib/api'
 import { Modal, Confirm, Toggle, StockBadge, SkeletonRows, Pagination, UploadZone, toast } from '@/components/admin/ui'
@@ -87,9 +87,10 @@ export default function ProductsPage() {
   }, [search])
 
   useEffect(() => {
-    fetch('/api/admin/categories')
-      .then(res => res.json())
-      .then(data => setCategories(data))
+    getCategories()
+      .then(data => {
+        if (Array.isArray(data)) setCategories(data)
+      })
       .catch(() => setCategories([]))
   }, [])
 
