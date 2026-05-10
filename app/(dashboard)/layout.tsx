@@ -8,28 +8,29 @@ import { logoutAdmin, getAdminToken } from '@/lib/auth'
 type User = {
   email: string
   role: 'ADMIN'
-  
 }
+
+// FIXED: Removed /admin/ from all hrefs
 const NAV = [
-  { href: '/admin/dashboard', label: 'Dashboard', chip: null,
+  { href: '/dashboard', label: 'Dashboard', chip: null,
     icon: <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="6" height="6" rx="1.5"/><rect x="9" y="1" width="6" height="6" rx="1.5"/><rect x="1" y="9" width="6" height="6" rx="1.5"/><rect x="9" y="9" width="6" height="6" rx="1.5"/></svg> },
-  { href: '/admin/products',  label: 'Products',  chip: '1,240',
+  { href: '/products',  label: 'Products',  chip: '1,240',
     icon: <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M2 4l6-2 6 2v8l-6 2-6-2V4z"/><path d="M8 2v12M2 4l6 2 6-2"/></svg> },
-  { href: '/admin/orders',    label: 'Orders',    chip: '12', chipColor: 'amber',
+  { href: '/orders',    label: 'Orders',    chip: '12', chipColor: 'amber',
     icon: <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="2" y="1" width="12" height="14" rx="1.5"/><path d="M5 5h6M5 8h6M5 11h4"/></svg> },
-  { href: '/admin/users',     label: 'Users',     chip: null,
+  { href: '/users',     label: 'Users',     chip: null,
     icon: <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="8" cy="5" r="3"/><path d="M2 14c0-3.3 2.7-6 6-6s6 2.7 6 6"/></svg> },
-  { href: '/admin/insta-live',label: 'Insta Live',chip: null,
+  { href: '/insta-live',label: 'Insta Live',chip: null,
     icon: <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="1" y="3" width="14" height="10" rx="1.5"/><circle cx="8" cy="8" r="2"/></svg> },
 ]
 
-
+// FIXED: Removed /admin/ from keys
 const PAGE_TITLES: Record<string, string> = {
-  '/admin/dashboard':  'Dashboard',
-  '/admin/products':   'Products',
-  '/admin/orders':     'Orders',
-  '/admin/users':      'Users',
-  '/admin/insta-live': 'Insta Live',
+  '/dashboard':  'Dashboard',
+  '/products':   'Products',
+  '/orders':     'Orders',
+  '/users':      'Users',
+  '/insta-live': 'Insta Live',
 }
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -37,14 +38,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const router = useRouter()
   const [user, setUser] = useState<User | null>(null)
 
-useEffect(() => {
-  if (pathname === '/admin/login') return
-  if (!getAdminToken()) {
-    router.replace('/admin/login')
-    return
-  }
-}, [pathname])
-
+  useEffect(() => {
+    // FIXED: Redirect to /login
+    if (!getAdminToken()) {
+      router.replace('/login')
+      return
+    }
+  }, [pathname, router])
 
   const pageTitle = PAGE_TITLES[pathname] || pathname.split('/').pop() || 'Admin'
   const date = new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
@@ -52,10 +52,9 @@ useEffect(() => {
   const handleLogout = async () => {
     if (!confirm('Sign out of Admin Panel?')) return
     await logoutAdmin()
-    router.replace('/admin/login')
+    // FIXED: Redirect to /login
+    router.replace('/login')
   }
-
-
 
   return (
     <div className="admin-shell">
