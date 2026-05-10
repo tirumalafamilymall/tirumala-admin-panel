@@ -1,6 +1,8 @@
 import { getAdminToken } from './auth'
 
-export const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
+const rawBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+// This regex ensures there is exactly ONE slash between the base and the path
+export const API_BASE = rawBase.endsWith('/') ? rawBase.slice(0, -1) : rawBase;
 
 /* ================== CORE FETCH WRAPPER ================== */
 

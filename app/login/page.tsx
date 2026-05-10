@@ -17,7 +17,7 @@ export default function LoginPage() {
     setLoading(true); setError('')
     try {
       await loginAdmin(email, password)
-      router.replace('/admin/dashboard')
+      router.replace('/dashboard')
     } catch (err: any) {
       if (err.message === 'ACCESS_DENIED') setError('Access denied. Only admins can sign in.')
       else setError('Invalid credentials. Please try again.')
@@ -47,7 +47,7 @@ export default function LoginPage() {
           <form onSubmit={handleLogin}>
             <div className="fgroup" style={{ marginBottom: 14 }}>
               <label className="flabel">Email Address</label>
-              <input className="finput" type="email" placeholder="admin@tfm.com"
+              <input className="finput" type="email" placeholder="admin@gmail.com"
                 value={email} onChange={e => setEmail(e.target.value)} />
             </div>
             <div className="fgroup" style={{ marginBottom: 18 }}>

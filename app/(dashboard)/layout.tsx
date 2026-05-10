@@ -14,9 +14,9 @@ type User = {
 const NAV = [
   { href: '/dashboard', label: 'Dashboard', chip: null,
     icon: <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="6" height="6" rx="1.5"/><rect x="9" y="1" width="6" height="6" rx="1.5"/><rect x="1" y="9" width="6" height="6" rx="1.5"/><rect x="9" y="9" width="6" height="6" rx="1.5"/></svg> },
-  { href: '/products',  label: 'Products',  chip: '1,240',
+  { href: '/products',  label: 'Products',  chip: 'null',
     icon: <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M2 4l6-2 6 2v8l-6 2-6-2V4z"/><path d="M8 2v12M2 4l6 2 6-2"/></svg> },
-  { href: '/orders',    label: 'Orders',    chip: '12', chipColor: 'amber',
+  { href: '/orders',    label: 'Orders',    chip: 'null', chipColor: 'amber',
     icon: <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="2" y="1" width="12" height="14" rx="1.5"/><path d="M5 5h6M5 8h6M5 11h4"/></svg> },
   { href: '/users',     label: 'Users',     chip: null,
     icon: <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="8" cy="5" r="3"/><path d="M2 14c0-3.3 2.7-6 6-6s6 2.7 6 6"/></svg> },
@@ -103,7 +103,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           ))}
 
           <div className="sb-section" style={{ marginTop: 8 }}>System</div>
-          <Link href="https://tirumala-family-mallv2.vercel.app" target="_blank" className="sb-item">
+          <Link href="https://www.tirumalafamilymall.com/" target="_blank" className="sb-item">
             <span className="sb-icon">
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
                 <path d="M9 2h5v5M14 2l-7 7M6 3H3a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-3"/>
@@ -120,7 +120,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </div>
             <div>
               <div className="sb-uname">{user?.email || 'Admin'}</div>
-              <div className="sb-urole">Super Admin</div>
+              <div className="sb-urole">Admin</div>
             </div>
             <button className="sb-logout-btn" onClick={handleLogout} title="Logout">
               <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8">
