@@ -126,13 +126,17 @@ export const updateInstaPost = (id: string, data: any) =>
 export const deleteInstaPost = (id: string) => 
   adminFetch(`/api/admin/insta-live/${id}`, { method: 'DELETE' })
 
+/* ================== INSTA LIVE ================== */
+
+// ... other insta live functions ...
+
 export const linkProduct = (postId: string, productId: string) => 
   adminFetch(`/api/admin/insta-live/${postId}/products`, { method: 'POST', body: JSON.stringify({ product_id: productId }) })
 
 export const unlinkProduct = (postId: string, productId: string) => 
-  adminFetch(`/api/admin/insta-live/${postId}/products`, { method: 'DELETE', body: JSON.stringify({ product_id: productId }) })
-
+  adminFetch(`/api/admin/insta-live/${postId}/products/${productId}`, { method: 'DELETE' })
 /* ================== UPLOADS ================== */
 
 export const uploadPresign = (filename: string, contentType: string) => 
   adminFetch(`/api/upload/presign?filename=${encodeURIComponent(filename)}&type=${encodeURIComponent(contentType)}`)
+

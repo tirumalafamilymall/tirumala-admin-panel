@@ -43,59 +43,33 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      {/* TWO COLUMN */}
-      <div className="two-col">
-        {/* Recent Orders */}
-        <div className="card">
-          <div className="card-header">
-            <div>
-              <div className="card-title">Recent Orders</div>
-              <div className="card-subtitle">Latest transactions</div>
-            </div>
-            <Link href="/admin/orders" className="card-action">View all →</Link>
+      {/* Recent Orders - Spanning full width now */}
+      <div className="card">
+        <div className="card-header">
+          <div>
+            <div className="card-title">Recent Orders</div>
+            <div className="card-subtitle">Latest transactions</div>
           </div>
-          <div className="tbl-wrap">
-            <table>
-              <thead>
-                <tr><th>Order #</th><th>Customer</th><th>Amount</th><th>Payment</th><th>Status</th></tr>
-              </thead>
-              <tbody>
-                {/* CORRECT PATH: data.stats.recent_orders */}
-                {loading ? <SkeletonRows cols={5} /> : (data?.stats?.recent_orders ?? []).map((o: any) => (
-                  <tr key={o.id}>
-                    <td><Link href={`/admin/orders/${o.id}`} className="ord-id">{o.order_number}</Link></td>
-                    <td style={{ fontWeight: 500 }}>{o.user?.name ?? '—'}</td>
-                    <td style={{ fontWeight: 700 }}>₹{Number(o.total_amount).toLocaleString('en-IN')}</td>
-                    <td><Badge status={o.payment_status} /></td>
-                    <td><Badge status={o.status} /></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <Link href="/admin/orders" className="card-action">View all →</Link>
         </div>
-
-        {/* Low Stock */}
-        <div className="card">
-          <div className="card-header">
-            <div>
-              <div className="card-title">Low Stock Alert</div>
-              <div className="card-subtitle" style={{ color: 'var(--red)' }}>Needs restocking</div>
-            </div>
-            <Link href="/admin/products" className="card-action">Manage →</Link>
-          </div>
-          {/* CORRECT PATH: data.stats.products.low_stock */}
-          {loading
-            ? <div style={{ padding: 20 }}><div className="skeleton" style={{ height: 200 }} /></div>
-            : (data?.stats?.products?.low_stock ?? []).map((p: any, i: number) => (
-              <div className="low-stock-row" key={i}>
-                <div>
-                  <div className="low-stock-name">{p.name}</div>
-                  <div className="low-stock-cat">{p.category}</div>
-                </div>
-                <StockBadge stock={p.stock} />
-              </div>
-            ))}
+        <div className="tbl-wrap">
+          <table>
+            <thead>
+              <tr><th>Order #</th><th>Customer</th><th>Amount</th><th>Payment</th><th>Status</th></tr>
+            </thead>
+            <tbody>
+              {/* CORRECT PATH: data.stats.recent_orders */}
+              {loading ? <SkeletonRows cols={5} /> : (data?.stats?.recent_orders ?? []).map((o: any) => (
+                <tr key={o.id}>
+                  <td><Link href={`/admin/orders/${o.id}`} className="ord-id">{o.order_number}</Link></td>
+                  <td style={{ fontWeight: 500 }}>{o.user?.name ?? '—'}</td>
+                  <td style={{ fontWeight: 700 }}>₹{Number(o.total_amount).toLocaleString('en-IN')}</td>
+                  <td><Badge status={o.payment_status} /></td>
+                  <td><Badge status={o.status} /></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
     </>

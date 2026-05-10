@@ -31,7 +31,6 @@ type ZipResult = {
   details: { product_code: string; status: string; reason?: string }[]
 }
 
-const CATS = ['Sarees','Kurtis','Dress Materials','Nightwear','Men Shirts','Kids Wear','Accessories','Innerwear']
 const PROD_EMOJIS: Record<string,string> = { Sarees:'🥻', Kurtis:'👗', 'Kids Wear':'👚', 'Men Shirts':'👕', Nightwear:'🌙', Accessories:'💍', default:'🛍️' }
 const emptyForm = { name:'', category:'', subcategory:'', brand:'', price:'', stock:'', color:'', size:'', barcode:'', is_active:true, images: [] as string[] }
 
@@ -54,9 +53,10 @@ export default function ProductsPage() {
   const [zipResult,   setZipResult]   = useState<ZipResult | null>(null)
   const [zipLoading,  setZipLoading]  = useState(false)
   const [saving,      setSaving]      = useState(false)
-  // Add these alongside your other states
+  const [previewImage, setPreviewImage] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [togglingId, setTogglingId] = useState<string | null>(null)
+  const [categories, setCategories] = useState<string[]>([])
 
   const PER_PAGE = 20
 
@@ -86,6 +86,13 @@ export default function ProductsPage() {
     return () => clearTimeout(t)
   }, [search])
 
+  useEffect(() => {
+    fetch('/api/admin/categories')
+      .then(res => res.json())
+      .then(data => setCategories(data))
+      .catch(() => setCategories([]))
+  }, [])
+
   function fset(k: keyof typeof form, v: any) { setForm(f => ({ ...f, [k]: v })) }
 
   function validate() {
@@ -110,7 +117,7 @@ export default function ProductsPage() {
       
       if (!uploadUrl) throw new Error('Failed to get upload URL')
       
-      const uploadRes = await fetch(uploadUrl, { method: 'PUT', body: file, headers: { 'Content-Type': file.type } })
+      const uploadRes = await fetch(uploadUrl, { method: 'PUT', body: file, headers: { 'Content-Type': file.type,'x-amz-acl': 'public-read' } })
       if (!uploadRes.ok) throw new Error('Failed to upload file to cloud')
       
       setForm(prev => ({ ...prev, images: [publicUrl] }))
@@ -140,23 +147,23 @@ export default function ProductsPage() {
     setSaving(false)
   }
 
-function openEdit(p: Product) {
+  function openEdit(p: Product) {
     setForm({
       name: p.name, category: p.category, subcategory: p.subcategory || '',
       brand: p.brand || '', price: String(p.base_price), stock: String(p.stock),
       color: p.color || '', size: p.size || '', barcode: p.barcode || '', is_active: p.is_active,
-      images: p.images || [] // <-- ADD THIS LINE
+      images: p.images || []
     })
     setEditItem(p); setAddOpen(true)
   }
 
-async function handleDelete() {
+  async function handleDelete() {
     if (!deleteItem || deleting) return
     setDeleting(true)
     try {
       await deleteProduct(deleteItem.id)
       toast('Product deleted', 'success')
-      setDeleteItem(null) // Close modal on success
+      setDeleteItem(null)
       loadProducts()
     } catch (e: any) { 
       toast(e?.message || 'Delete failed', 'error') 
@@ -164,7 +171,6 @@ async function handleDelete() {
       setDeleting(false)
     }
   }
-
 
   async function handleExcelFile(file: File) {
     try {
@@ -175,7 +181,7 @@ async function handleDelete() {
     } catch (e: any) { toast(e?.message || 'Upload failed', 'error') }
   }
 
-async function handleZipUpload(file: File) {
+  async function handleZipUpload(file: File) {
     setZipLoading(true)
     setZipResult(null)
     
@@ -187,7 +193,6 @@ async function handleZipUpload(file: File) {
       const ALLOWED_EXTS = ['jpg', 'jpeg', 'png', 'webp']
       const extractedFiles: { productCode: string; fileName: string; mimeType: string; blob: Blob }[] = []
 
-      // 1. Extract files directly into browser memory
       for (const [relativePath, zipEntry] of Object.entries(zip.files)) {
         if (zipEntry.dir) continue
         
@@ -210,7 +215,6 @@ async function handleZipUpload(file: File) {
       const token = getAdminToken()
       const headers = { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) }
 
-      // 2. Ask backend for Presigned URLs
       const initPayload = extractedFiles.map(({ productCode, fileName, mimeType }) => ({ productCode, fileName, mimeType }))
       const initRes = await fetch(`${API_BASE}/api/admin/products/images`, {
         method: 'POST',
@@ -227,7 +231,6 @@ async function handleZipUpload(file: File) {
 
       toast(`Uploading ${matched.length} images to cloud...`, 'info')
 
-      // 3. Upload directly to DigitalOcean from the browser (Batching to prevent network stalls)
       const BATCH_SIZE = 20
       for (let i = 0; i < matched.length; i += BATCH_SIZE) {
         const batch = matched.slice(i, i + BATCH_SIZE)
@@ -240,7 +243,7 @@ async function handleZipUpload(file: File) {
             const uploadRes = await fetch(item.uploadUrl, {
               method: 'PUT',
               body: fileData.blob,
-              headers: { 'Content-Type': fileData.mimeType },
+              headers: { 'Content-Type': fileData.mimeType, 'x-amz-acl': 'public-read' },
             })
             if (uploadRes.ok) {
               successfulUploads.push({ productId: item.productId, publicUrl: item.publicUrl })
@@ -253,7 +256,6 @@ async function handleZipUpload(file: File) {
         }))
       }
 
-      // 4. Tell the backend to save the successful URLs to the database
       toast(`Saving ${successfulUploads.length} images to database...`, 'info')
       const commitRes = await fetch(`${API_BASE}/api/admin/products/images`, {
         method: 'POST',
@@ -264,7 +266,6 @@ async function handleZipUpload(file: File) {
       const commitData = await commitRes.json()
       if (!commitRes.ok) throw new Error(commitData.error || 'Database update failed')
 
-      // 5. Build final result object to match your existing UI state
       setZipResult({
         summary: {
           total: extractedFiles.length,
@@ -285,8 +286,8 @@ async function handleZipUpload(file: File) {
     }
   }
 
-async function toggleActive(p: Product) {
-    if (togglingId === p.id) return // Prevent spam clicking
+  async function toggleActive(p: Product) {
+    if (togglingId === p.id) return
     setTogglingId(p.id)
     try {
       await updateProduct(p.id, { is_active: !p.is_active })
@@ -298,6 +299,7 @@ async function toggleActive(p: Product) {
       setTogglingId(null)
     }
   }
+
   return (
     <>
       {/* Filter bar */}
@@ -306,15 +308,19 @@ async function toggleActive(p: Product) {
           <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="6.5" cy="6.5" r="5"/><path d="M11 11l3 3"/></svg>
           <input type="text" placeholder="Search by name, code, category…" value={search} onChange={e => { setSearch(e.target.value); setPage(1) }} />
         </div>
+        
+        {/* Error 1: Fixed malformed JSX in Category Dropdown */}
         <select className="flt-select" value={catFilter} onChange={e => { setCatFilter(e.target.value); setPage(1) }}>
           <option value="">All Categories</option>
-          {CATS.map(c => <option key={c}>{c}</option>)}
+          {categories.map(c => <option key={c}>{c}</option>)}
         </select>
+
         <select className="flt-select" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
           <option value="">All Status</option>
           <option value="active">Active</option>
           <option value="inactive">Inactive</option>
         </select>
+
         <div className="ms-auto" style={{ display:'flex', gap:8 }}>
           <button className="btn btn-primary" onClick={() => { setForm(emptyForm); setEditItem(null); setFormErrors({}); setAddOpen(true) }}>
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 1v10M1 6h10"/></svg>
@@ -339,21 +345,34 @@ async function toggleActive(p: Product) {
                 ? <tr><td colSpan={9} style={{ textAlign:'center', padding:40, color:'var(--ink-5)' }}>No products found</td></tr>
                 : products.map(p => (
                   <tr key={p.id} style={{ background: p.stock === 0 ? 'rgba(254,240,240,.4)' : undefined }}>
+                    
+                    {/* Error 2: Fixed orphaned <td> block without wrapper */}
                     <td>
-                      <div className="prod-thumb" style={{ background: p.stock === 0 ? '#FEF0F0' : 'var(--cream-2)', overflow:'hidden' }}>
+                      <div 
+                        className="prod-thumb" 
+                        style={{ 
+                          background: p.stock === 0 ? '#FEF0F0' : 'var(--cream-2)', 
+                          overflow: 'hidden',
+                          cursor: p.images?.[0] ? 'zoom-in' : 'default'
+                        }}
+                        onClick={() => p.images?.[0] && setPreviewImage(p.images[0])}
+                      >
                         {p.images?.[0]
                           ? <img src={p.images[0]} alt={p.name} style={{ width:'100%', height:'100%', objectFit:'cover', borderRadius:6 }} />
                           : (PROD_EMOJIS[p.category] || PROD_EMOJIS.default)}
                       </div>
                     </td>
+
                     <td><span style={{ fontFamily:'monospace', fontSize:11, color:'var(--ink-5)', background:'var(--cream-2)', padding:'2px 6px', borderRadius:4 }}>{p.product_code}</span></td>
                     <td style={{ fontWeight:600 }}>{p.name}</td>
                     <td><span className="badge badge-USER">{p.category}</span></td>
                     <td style={{ fontSize:12, color:'var(--ink-4)' }}>{p.brand || '—'}</td>
                     <td style={{ fontWeight:700 }}>₹{p.base_price.toLocaleString('en-IN')}</td>
                     <td><StockBadge stock={p.stock} /></td>
-{/* Find this line in the table body: */}
-<td><Toggle checked={p.is_active} onChange={() => toggleActive(p)} disabled={togglingId === p.id} /></td>
+                    
+                    {/* Error 3: Replaced redundant text node outside tag */}
+                    <td><Toggle checked={p.is_active} onChange={() => toggleActive(p)} disabled={togglingId === p.id} /></td>
+                    
                     <td>
                       <div style={{ display:'flex', gap:5 }}>
                         <button className="btn btn-sm" onClick={() => openEdit(p)}>✏️ Edit</button>
@@ -375,10 +394,21 @@ async function toggleActive(p: Product) {
           <button className="btn" onClick={() => { setAddOpen(false); setEditItem(null) }}>Cancel</button>
           <button className="btn btn-primary" onClick={handleSave} disabled={saving}>{saving ? 'Saving…' : editItem ? 'Save Changes' : 'Add Product'}</button>
         </>}>
+        
         <div className="form-grid">
           <div className="fgroup"><label className="flabel">Product Code (auto)</label><input className="finput" value={editItem?.product_code || 'TFM-AUTO'} disabled /></div>
           <div className="fgroup"><label className="flabel">Name *</label><input className="finput" placeholder="e.g. Silk Blend Saree" value={form.name} onChange={e => fset('name',e.target.value)} />{formErrors.name && <div className="ferror">{formErrors.name}</div>}</div>
-          <div className="fgroup"><label className="flabel">Category *</label><select value={form.category} onChange={e => fset('category',e.target.value)}><option value="">Select category</option>{CATS.map(c => <option key={c}>{c}</option>)}</select>{formErrors.category && <div className="ferror">{formErrors.category}</div>}</div>
+          
+          {/* Error 4: Fixed duplicate mapping inside Category Select in Modal */}
+          <div className="fgroup">
+            <label className="flabel">Category *</label>
+            <select value={form.category} onChange={e => fset('category',e.target.value)}>
+              <option value="">Select category</option>
+              {categories.map(c => <option key={c}>{c}</option>)}
+            </select>
+            {formErrors.category && <div className="ferror">{formErrors.category}</div>}
+          </div>
+
           <div className="fgroup"><label className="flabel">Subcategory</label><input className="finput" placeholder="e.g. Silk Sarees" value={form.subcategory} onChange={e => fset('subcategory',e.target.value)} /></div>
           <div className="fgroup"><label className="flabel">Brand</label><input className="finput" placeholder="Brand name" value={form.brand} onChange={e => fset('brand',e.target.value)} /></div>
           <div className="fgroup"><label className="flabel">Base Price (₹) *</label><input className="finput" type="number" placeholder="999" value={form.price} onChange={e => fset('price',e.target.value)} />{formErrors.price && <div className="ferror">{formErrors.price}</div>}</div>
@@ -386,7 +416,6 @@ async function toggleActive(p: Product) {
           <div className="fgroup"><label className="flabel">Color</label><input className="finput" placeholder="Red, Blue, Multi…" value={form.color} onChange={e => fset('color',e.target.value)} /></div>
           <div className="fgroup"><label className="flabel">Size</label><input className="finput" placeholder="S, M, L, XL, Free Size" value={form.size} onChange={e => fset('size',e.target.value)} /></div>
           <div className="fgroup"><label className="flabel">Barcode</label><input className="finput" placeholder="Scan or enter barcode" value={form.barcode} onChange={e => fset('barcode',e.target.value)} /></div>
-          
           
           <div className="fgroup full">
             <label className="flabel">Product Image</label>
@@ -412,11 +441,15 @@ async function toggleActive(p: Product) {
         </div>
       </Modal>
 
-<Confirm open={!!deleteItem} onClose={() => setDeleteItem(null)} onConfirm={handleDelete}
-        title="Delete Product" message={`Delete "${deleteItem?.name}"?`} icon="🗑️" 
-        confirmLabel={deleting ? "Deleting..." : "Yes, Delete"} />
-
-
+      <Confirm 
+        open={!!deleteItem} 
+        onClose={() => setDeleteItem(null)} 
+        onConfirm={handleDelete}
+        title="Delete Product" 
+        message={`Delete "${deleteItem?.name}"?`} 
+        icon="🗑️" 
+        confirmLabel={deleting ? "Deleting..." : "Yes, Delete"} 
+      />
 
       {/* Excel Upload Modal */}
       <Modal open={excelOpen} onClose={() => setExcelOpen(false)} title="Excel / CSV Upload" wide
@@ -437,7 +470,6 @@ async function toggleActive(p: Product) {
       {/* ZIP Images Modal */}
       <Modal open={zipOpen} onClose={() => setZipOpen(false)} title="Upload Product Images (ZIP)" wide
         footer={<button className="btn" onClick={() => setZipOpen(false)}>Close</button>}>
-
         <div style={{ marginBottom:14, padding:'10px 14px', background:'var(--cream-2)', borderRadius:8, fontSize:12.5, color:'var(--ink-3)', lineHeight:1.7 }}>
           <strong>How it works:</strong><br />
           1. Create a ZIP containing your product images<br />
@@ -450,11 +482,7 @@ async function toggleActive(p: Product) {
             ⏳ Uploading and processing images…
           </div>
         ) : (
-          <UploadZone
-            label="Drag & drop your ZIP file here"
-            subLabel="ZIP containing JPG, PNG, or WebP images named by product code"
-            onFile={handleZipUpload}
-          />
+          <UploadZone label="Drag & drop your ZIP file here" subLabel="ZIP containing JPG, PNG, or WebP images named by product code" onFile={handleZipUpload} />
         )}
 
         {zipResult && (
@@ -500,6 +528,42 @@ async function toggleActive(p: Product) {
           </div>
         )}
       </Modal>
+
+      {/* Full-Screen Image Preview (Lightbox) */}
+      {previewImage && (
+        <div 
+          style={{ 
+            position: 'fixed', inset: 0, zIndex: 9999, 
+            display: 'flex', alignItems: 'center', justifyContent: 'center', 
+            background: 'rgba(20, 10, 10, 0.6)',
+            backdropFilter: 'blur(8px)'
+          }}
+          onClick={() => setPreviewImage(null)}
+        >
+          <button 
+            style={{
+              position: 'absolute', top: 30, right: 40, width: 44, height: 44,
+              background: 'var(--cream-2)', border: 'none', borderRadius: '50%',
+              fontSize: 20, cursor: 'pointer', color: 'var(--ink-1)',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.2)'
+            }}
+            onClick={() => setPreviewImage(null)}
+          >
+            ✕
+          </button>
+          
+          <img 
+            src={previewImage} 
+            alt="Expanded Preview" 
+            style={{ 
+              maxHeight: '85vh', maxWidth: '90vw', 
+              borderRadius: 12, boxShadow: '0 20px 50px rgba(0,0,0,0.4)',
+              objectFit: 'contain' 
+            }} 
+            onClick={e => e.stopPropagation()}
+          />
+        </div>
+      )}
     </>
   )
 }
