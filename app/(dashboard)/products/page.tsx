@@ -32,7 +32,7 @@ type ZipResult = {
 }
 
 const PROD_EMOJIS: Record<string,string> = { Sarees:'🥻', Kurtis:'👗', 'Kids Wear':'👚', 'Men Shirts':'👕', Nightwear:'🌙', Accessories:'💍', default:'🛍️' }
-const emptyForm = { name:'', category:'', subcategory:'', brand:'', price:'', stock:'', color:'', size:'', barcode:'', is_active:true, images: [] as string[] }
+const emptyForm = { product_code:'', name:'', category:'', subcategory:'', brand:'', price:'', stock:'', color:'', size:'', barcode:'', is_active:true, images: [] as string[] }
 
 export default function ProductsPage() {
   const [products,    setProducts]    = useState<Product[]>([])
@@ -148,8 +148,9 @@ export default function ProductsPage() {
     setSaving(false)
   }
 
-  function openEdit(p: Product) {
+function openEdit(p: Product) {
     setForm({
+      product_code: p.product_code || '', // <--- ADD THIS
       name: p.name, category: p.category, subcategory: p.subcategory || '',
       brand: p.brand || '', price: String(p.base_price), stock: String(p.stock),
       color: p.color || '', size: p.size || '', barcode: p.barcode || '', is_active: p.is_active,
@@ -397,16 +398,34 @@ export default function ProductsPage() {
         </>}>
         
         <div className="form-grid">
-          <div className="fgroup"><label className="flabel">Product Code (auto)</label><input className="finput" value={editItem?.product_code || 'TFM-AUTO'} disabled /></div>
+         {/* Typable Product Code */}
+          <div className="fgroup">
+            <label className="flabel">Product Code</label>
+            <input 
+              className="finput" 
+              placeholder="Leave blank to auto-generate" 
+              value={form.product_code} 
+              onChange={e => fset('product_code', e.target.value.toUpperCase())} 
+              disabled={!!editItem} // Optional: Prevents changing code AFTER creation to avoid DB breaking
+            />
+          </div>
+
+         
           <div className="fgroup"><label className="flabel">Name *</label><input className="finput" placeholder="e.g. Silk Blend Saree" value={form.name} onChange={e => fset('name',e.target.value)} />{formErrors.name && <div className="ferror">{formErrors.name}</div>}</div>
           
-          {/* Error 4: Fixed duplicate mapping inside Category Select in Modal */}
+ {/* Typable Category with Dropdown Datalist */}
           <div className="fgroup">
             <label className="flabel">Category *</label>
-            <select value={form.category} onChange={e => fset('category',e.target.value)}>
-              <option value="">Select category</option>
-              {categories.map(c => <option key={c}>{c}</option>)}
-            </select>
+            <input 
+              className="finput" 
+              list="category-options" 
+              placeholder="Type or select category..." 
+              value={form.category} 
+              onChange={e => fset('category', e.target.value)} 
+            />
+            <datalist id="category-options">
+              {categories.map(c => <option key={c} value={c} />)}
+            </datalist>
             {formErrors.category && <div className="ferror">{formErrors.category}</div>}
           </div>
 
