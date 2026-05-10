@@ -93,8 +93,6 @@ export default function UsersPage() {
                 <th>Email</th>
                 <th>Orders</th>
                 <th>Joined</th>
-                <th>Role</th>
-                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -124,12 +122,6 @@ export default function UsersPage() {
                     </td>
                     <td style={{ fontSize: 12, color: 'var(--ink-5)' }}>
                       {u.created_at ? new Date(u.created_at).toLocaleDateString('en-IN') : '—'}
-                    </td>
-                    <td><Badge status={u.role || 'USER'} /></td>
-                    <td>
-                      <button className="btn btn-sm" onClick={() => setRoleConfirm(u)}>
-                        Change Role
-                      </button>
                     </td>
                   </tr>
                 ))
