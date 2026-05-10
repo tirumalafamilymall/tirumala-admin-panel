@@ -37,14 +37,24 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const pathname = usePathname()
   const router = useRouter()
   const [user, setUser] = useState<User | null>(null)
+  
+  // ADD THIS: A loading state to prevent the "flash"
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true)
 
   useEffect(() => {
-    // FIXED: Redirect to /login
+    // Check for token
     if (!getAdminToken()) {
       router.replace('/login')
-      return
+    } else {
+      // If token exists, reveal the dashboard
+      setIsCheckingAuth(false)
     }
   }, [pathname, router])
+
+  // ADD THIS: If we are still checking, or if there is no token, render nothing (or a loader)
+  if (isCheckingAuth) {
+    return <div className="min-h-screen bg-[#450a0a]" /> // Matches your dark maroon login background
+  }
 
   const pageTitle = PAGE_TITLES[pathname] || pathname.split('/').pop() || 'Admin'
   const date = new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })

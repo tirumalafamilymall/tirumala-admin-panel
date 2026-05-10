@@ -15,13 +15,17 @@ async function adminFetch(path: string, options: RequestInit = {}) {
 
   let res = await fetch(`${API_BASE}${path}`, { ...options, headers })
 
-  // Auto-refresh on 401
+// Auto-refresh on 401
   if (res.status === 401) {
-    const { refreshAdminToken } = await import('./auth')
+    const { refreshAdminToken, logoutAdmin } = await import('./auth')
     const newToken = await refreshAdminToken()
     if (newToken) {
       headers['Authorization'] = `Bearer ${newToken}`
       res = await fetch(`${API_BASE}${path}`, { ...options, headers })
+    } else {
+      // IF REFRESH FAILS: Force logout and kick to login screen
+      await logoutAdmin()
+      if (typeof window !== 'undefined') window.location.href = '/login'
     }
   }
 
