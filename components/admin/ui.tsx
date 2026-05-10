@@ -137,10 +137,30 @@ export function Pagination({ page, total, perPage, totalItems, onChange }: {
 }
 
 /* ── TOGGLE ───────────────────────────────────── */
-export function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
+export function Toggle({ 
+  checked, 
+  onChange, 
+  disabled 
+}: { 
+  checked: boolean; 
+  onChange: (v: boolean) => void; 
+  disabled?: boolean; 
+}) {
   return (
-    <label className="toggle">
-      <input type="checkbox" checked={checked} onChange={e => onChange(e.target.checked)} />
+    <label 
+      className="toggle" 
+      style={{ 
+        opacity: disabled ? 0.6 : 1, 
+        cursor: disabled ? 'not-allowed' : 'pointer',
+        pointerEvents: disabled ? 'none' : 'auto'
+      }}
+    >
+      <input 
+        type="checkbox" 
+        checked={checked} 
+        onChange={e => onChange(e.target.checked)} 
+        disabled={disabled} 
+      />
       <span className="toggle-slider"></span>
     </label>
   )

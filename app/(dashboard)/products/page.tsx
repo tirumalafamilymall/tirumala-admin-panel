@@ -33,7 +33,7 @@ type ZipResult = {
 
 const CATS = ['Sarees','Kurtis','Dress Materials','Nightwear','Men Shirts','Kids Wear','Accessories','Innerwear']
 const PROD_EMOJIS: Record<string,string> = { Sarees:'🥻', Kurtis:'👗', 'Kids Wear':'👚', 'Men Shirts':'👕', Nightwear:'🌙', Accessories:'💍', default:'🛍️' }
-const emptyForm = { name:'', category:'', subcategory:'', brand:'', price:'', stock:'', color:'', size:'', barcode:'', is_active:true }
+const emptyForm = { name:'', category:'', subcategory:'', brand:'', price:'', stock:'', color:'', size:'', barcode:'', is_active:true, images: [] as string[] }
 
 export default function ProductsPage() {
   const [products,    setProducts]    = useState<Product[]>([])
@@ -54,6 +54,9 @@ export default function ProductsPage() {
   const [zipResult,   setZipResult]   = useState<ZipResult | null>(null)
   const [zipLoading,  setZipLoading]  = useState(false)
   const [saving,      setSaving]      = useState(false)
+  // Add these alongside your other states
+  const [deleting, setDeleting] = useState(false)
+  const [togglingId, setTogglingId] = useState<string | null>(null)
 
   const PER_PAGE = 20
 
@@ -94,6 +97,31 @@ export default function ProductsPage() {
     return Object.keys(errs).length === 0
   }
 
+  const [imageUploading, setImageUploading] = useState(false)
+
+  async function handleSingleImageUpload(file: File) {
+    setImageUploading(true)
+    try {
+      const token = getAdminToken()
+      const headers = { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) }
+      
+      const initRes = await fetch(`${API_BASE}/api/upload/presign?filename=${encodeURIComponent(file.name)}&type=${encodeURIComponent(file.type)}`, { headers })
+      const { uploadUrl, publicUrl } = await initRes.json()
+      
+      if (!uploadUrl) throw new Error('Failed to get upload URL')
+      
+      const uploadRes = await fetch(uploadUrl, { method: 'PUT', body: file, headers: { 'Content-Type': file.type } })
+      if (!uploadRes.ok) throw new Error('Failed to upload file to cloud')
+      
+      setForm(prev => ({ ...prev, images: [publicUrl] }))
+      toast('Image uploaded', 'success')
+    } catch (e: any) {
+      toast(e.message || 'Image upload failed', 'error')
+    } finally {
+      setImageUploading(false)
+    }
+  }
+
   async function handleSave() {
     if (!validate()) return
     setSaving(true)
@@ -112,22 +140,29 @@ export default function ProductsPage() {
     setSaving(false)
   }
 
-  function openEdit(p: Product) {
+function openEdit(p: Product) {
     setForm({
       name: p.name, category: p.category, subcategory: p.subcategory || '',
       brand: p.brand || '', price: String(p.base_price), stock: String(p.stock),
       color: p.color || '', size: p.size || '', barcode: p.barcode || '', is_active: p.is_active,
+      images: p.images || [] // <-- ADD THIS LINE
     })
     setEditItem(p); setAddOpen(true)
   }
 
-  async function handleDelete() {
-    if (!deleteItem) return
+async function handleDelete() {
+    if (!deleteItem || deleting) return
+    setDeleting(true)
     try {
       await deleteProduct(deleteItem.id)
       toast('Product deleted', 'success')
+      setDeleteItem(null) // Close modal on success
       loadProducts()
-    } catch (e: any) { toast(e?.message || 'Delete failed', 'error') }
+    } catch (e: any) { 
+      toast(e?.message || 'Delete failed', 'error') 
+    } finally {
+      setDeleting(false)
+    }
   }
 
 
@@ -250,14 +285,19 @@ async function handleZipUpload(file: File) {
     }
   }
 
-  async function toggleActive(p: Product) {
+async function toggleActive(p: Product) {
+    if (togglingId === p.id) return // Prevent spam clicking
+    setTogglingId(p.id)
     try {
       await updateProduct(p.id, { is_active: !p.is_active })
       setProducts(ps => ps.map(x => x.id === p.id ? { ...x, is_active: !x.is_active } : x))
       toast('Status updated', 'success')
-    } catch (e: any) { toast(e?.message || 'Failed', 'error') }
+    } catch (e: any) { 
+      toast(e?.message || 'Failed', 'error') 
+    } finally {
+      setTogglingId(null)
+    }
   }
-
   return (
     <>
       {/* Filter bar */}
@@ -312,7 +352,8 @@ async function handleZipUpload(file: File) {
                     <td style={{ fontSize:12, color:'var(--ink-4)' }}>{p.brand || '—'}</td>
                     <td style={{ fontWeight:700 }}>₹{p.base_price.toLocaleString('en-IN')}</td>
                     <td><StockBadge stock={p.stock} /></td>
-                    <td><Toggle checked={p.is_active} onChange={() => toggleActive(p)} /></td>
+{/* Find this line in the table body: */}
+<td><Toggle checked={p.is_active} onChange={() => toggleActive(p)} disabled={togglingId === p.id} /></td>
                     <td>
                       <div style={{ display:'flex', gap:5 }}>
                         <button className="btn btn-sm" onClick={() => openEdit(p)}>✏️ Edit</button>
@@ -345,6 +386,24 @@ async function handleZipUpload(file: File) {
           <div className="fgroup"><label className="flabel">Color</label><input className="finput" placeholder="Red, Blue, Multi…" value={form.color} onChange={e => fset('color',e.target.value)} /></div>
           <div className="fgroup"><label className="flabel">Size</label><input className="finput" placeholder="S, M, L, XL, Free Size" value={form.size} onChange={e => fset('size',e.target.value)} /></div>
           <div className="fgroup"><label className="flabel">Barcode</label><input className="finput" placeholder="Scan or enter barcode" value={form.barcode} onChange={e => fset('barcode',e.target.value)} /></div>
+          
+          
+          <div className="fgroup full">
+            <label className="flabel">Product Image</label>
+            {form.images && form.images.length > 0 ? (
+              <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                <div style={{ width: 60, height: 60, borderRadius: 6, overflow: 'hidden', border: '1px solid var(--border)' }}>
+                  <img src={form.images[0]} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                </div>
+                <button className="btn btn-sm" onClick={() => setForm(f => ({ ...f, images: [] }))} style={{ color: 'var(--red-1)' }}>Remove</button>
+              </div>
+            ) : imageUploading ? (
+              <div style={{ padding: '15px', textAlign: 'center', background: 'var(--cream-2)', borderRadius: 6, fontSize: 13, color: 'var(--ink-4)' }}>⏳ Uploading...</div>
+            ) : (
+              <UploadZone label="Upload Product Image" subLabel="JPG, PNG, WebP (Max 5MB)" onFile={handleSingleImageUpload} />
+            )}
+          </div>
+          
           <div className="fgroup full" style={{ flexDirection:'row', alignItems:'center', gap:12 }}>
             <label className="flabel" style={{ margin:0 }}>Active</label>
             <Toggle checked={form.is_active} onChange={v => fset('is_active',v)} />
@@ -353,10 +412,9 @@ async function handleZipUpload(file: File) {
         </div>
       </Modal>
 
-      {/* Delete Confirm */}
-      <Confirm open={!!deleteItem} onClose={() => setDeleteItem(null)} onConfirm={handleDelete}
-        title="Delete Product" message={`Delete &quot;${deleteItem?.name}&quot;? This will remove it from the storefront immediately.`}
-        icon="🗑️" confirmLabel="Yes, Delete" />
+<Confirm open={!!deleteItem} onClose={() => setDeleteItem(null)} onConfirm={handleDelete}
+        title="Delete Product" message={`Delete "${deleteItem?.name}"?`} icon="🗑️" 
+        confirmLabel={deleting ? "Deleting..." : "Yes, Delete"} />
 
 
 
