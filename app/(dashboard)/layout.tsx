@@ -141,7 +141,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </div>
             <div>
               <div className="sb-uname">{user?.email || 'Admin'}</div>
-              <div className="sb-urole">Admin</div>
             </div>
             <button className="sb-logout-btn" onClick={handleLogout} title="Logout">
               <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8">
