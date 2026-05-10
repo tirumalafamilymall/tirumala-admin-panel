@@ -48,8 +48,6 @@ export default function ProductsPage() {
   const [deleteItem,  setDeleteItem]  = useState<Product | null>(null)
   const [form,        setForm]        = useState(emptyForm)
   const [formErrors,  setFormErrors]  = useState<Record<string,string>>({})
-  const [bulkOpen,    setBulkOpen]    = useState(false)
-  const [bulkJSON,    setBulkJSON]    = useState('')
   const [excelOpen,   setExcelOpen]   = useState(false)
   const [excelResult, setExcelResult] = useState<ExcelResult | null>(null)
   const [zipOpen,     setZipOpen]     = useState(false)
@@ -132,14 +130,6 @@ export default function ProductsPage() {
     } catch (e: any) { toast(e?.message || 'Delete failed', 'error') }
   }
 
-  async function handleBulkJSON() {
-    try { JSON.parse(bulkJSON) } catch { toast('Invalid JSON', 'error'); return }
-    try {
-      await bulkUploadJSON(JSON.parse(bulkJSON))
-      toast('Bulk upload submitted', 'success')
-      setBulkOpen(false); loadProducts()
-    } catch (e: any) { toast(e?.message || 'Upload failed', 'error') }
-  }
 
   async function handleExcelFile(file: File) {
     try {
@@ -290,7 +280,6 @@ async function handleZipUpload(file: File) {
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 1v10M1 6h10"/></svg>
             Add Product
           </button>
-          <button className="btn" onClick={() => setBulkOpen(true)}>📋 Bulk JSON</button>
           <button className="btn btn-gold" onClick={() => { setExcelResult(null); setExcelOpen(true) }}>📊 Excel Upload</button>
           <button className="btn" style={{ background:'var(--cream-2)', border:'1px solid var(--border)' }} onClick={() => { setZipResult(null); setZipOpen(true) }}>📸 Images ZIP</button>
         </div>
@@ -369,16 +358,7 @@ async function handleZipUpload(file: File) {
         title="Delete Product" message={`Delete &quot;${deleteItem?.name}&quot;? This will remove it from the storefront immediately.`}
         icon="🗑️" confirmLabel="Yes, Delete" />
 
-      {/* Bulk JSON Modal */}
-      <Modal open={bulkOpen} onClose={() => setBulkOpen(false)} title="Bulk JSON Upload" wide
-        footer={<><button className="btn" onClick={() => setBulkOpen(false)}>Cancel</button><button className="btn btn-primary" onClick={handleBulkJSON}>Upload JSON</button></>}>
-        <div className="fgroup">
-          <label className="flabel">Paste JSON Array</label>
-          <textarea style={{ fontFamily:'monospace', fontSize:11.5, minHeight:160, background:'var(--cream-2)' }}
-            placeholder={'[\n  {"name":"Silk Saree","category":"Sarees","base_price":1299,"stock":10}\n]'}
-            value={bulkJSON} onChange={e => setBulkJSON(e.target.value)} />
-        </div>
-      </Modal>
+
 
       {/* Excel Upload Modal */}
       <Modal open={excelOpen} onClose={() => setExcelOpen(false)} title="Excel / CSV Upload" wide

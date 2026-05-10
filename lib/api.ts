@@ -64,9 +64,6 @@ export const updateProduct = (id: string, data: any) =>
 export const deleteProduct = (id: string) => 
   adminFetch(`/api/admin/products/${id}`, { method: 'DELETE' })
 
-export const bulkUploadJSON = (products: any[]) => 
-  adminFetch('/api/admin/products/bulk', { method: 'POST', body: JSON.stringify(products) })
-
 export const uploadExcel = (file: File) => {
   const form = new FormData()
   form.append('file', file)

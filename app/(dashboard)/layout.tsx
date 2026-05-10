@@ -45,11 +45,11 @@ const NAV = [
   },
 ]
 
-// FIXED: Removed /admin/ from keys
 const PAGE_TITLES: Record<string, string> = {
   '/dashboard':  'Dashboard',
   '/products':   'Products',
   '/orders':     'Orders',
+  '/shipping':   'Shipping', 
   '/users':      'Users',
   '/insta-live': 'Insta Live',
 }
