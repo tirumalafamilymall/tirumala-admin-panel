@@ -10,7 +10,6 @@ type User = {
   role: 'ADMIN'
 }
 
-// FIXED: Removed /admin/ from all hrefs
 const NAV = [
   { 
     href: '/dashboard', 
@@ -21,15 +20,23 @@ const NAV = [
   { 
     href: '/products',  
     label: 'Products',  
-    chip: null, // Fixed: removed 'null' string
+    chip: null,
     icon: <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M2 4l6-2 6 2v8l-6 2-6-2V4z"/><path d="M8 2v12M2 4l6 2 6-2"/></svg> 
   },
   { 
     href: '/orders',    
     label: 'Orders',    
-    chip: null, // Fixed: removed 'null' string
+    chip: null,
     chipColor: 'amber',
     icon: <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="2" y="1" width="12" height="14" rx="1.5"/><path d="M5 5h6M5 8h6M5 11h4"/></svg> 
+  },
+  /* --- ADDED SHIPPING HERE --- */
+  { 
+    href: '/shipping',    
+    label: 'Shipping',    
+    chip: 'Live',
+    chipColor: 'green',
+    icon: <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M1 5h10l4 3v5H1V5z"/><circle cx="4" cy="13" r="1.5"/><circle cx="12" cy="13" r="1.5"/><path d="M11 5V3a1 1 0 0 0-1-1H3a1 1 0 0 0-1 1v2"/></svg> 
   },
   { 
     href: '/users',     
