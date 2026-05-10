@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
-import { getProducts, createProduct, updateProduct, deleteProduct, bulkUploadJSON, uploadExcel } from '@/lib/api'
+import { getProducts, createProduct, updateProduct, deleteProduct, uploadExcel } from '@/lib/api'
 import { getAdminToken } from '@/lib/auth'
 import { API_BASE } from '@/lib/api'
 import { Modal, Confirm, Toggle, StockBadge, SkeletonRows, Pagination, UploadZone, toast } from '@/components/admin/ui'
