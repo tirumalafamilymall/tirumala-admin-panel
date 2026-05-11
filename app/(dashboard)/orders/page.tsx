@@ -1,6 +1,5 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
-import Link from 'next/link'
 import { getOrders } from '@/lib/api'
 import { Badge, SkeletonRows, Pagination, toast } from '@/components/admin/ui'
 
@@ -71,13 +70,14 @@ export default function OrdersPage() {
         <div className="tbl-wrap">
           <table>
             <thead>
-              <tr><th>Order #</th><th>Customer</th><th>Items</th><th>Amount</th><th>Payment</th><th>Status</th><th>Date</th><th>Action</th></tr>
+              {/* Removed the <th>Action</th> here */}
+              <tr><th>Order #</th><th>Customer</th><th>Items</th><th>Amount</th><th>Payment</th><th>Status</th><th>Date</th></tr>
             </thead>
             <tbody>
               {loading
-                ? <SkeletonRows cols={8} />
+                ? <SkeletonRows cols={7} /> /* Changed cols from 8 to 7 */
                 : orders.length === 0
-                ? <tr><td colSpan={8} style={{ textAlign:'center', padding:40, color:'var(--ink-5)' }}>No orders found</td></tr>
+                ? <tr><td colSpan={7} style={{ textAlign:'center', padding:40, color:'var(--ink-5)' }}>No orders found</td></tr>
                 : orders.map(o => (
                   <tr key={o.id}>
                     <td><span className="ord-id">{o.order_number}</span></td>
@@ -89,7 +89,7 @@ export default function OrdersPage() {
                     <td style={{ fontSize:11.5, color:'var(--ink-5)', whiteSpace:'nowrap' }}>
                       {new Date(o.created_at).toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'numeric' })}
                     </td>
-                    <td><Link href={`/admin/orders/${o.id}`} className="btn btn-sm">View →</Link></td>
+                    {/* Removed the Action <td> here */}
                   </tr>
                 ))}
             </tbody>
