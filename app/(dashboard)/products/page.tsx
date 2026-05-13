@@ -137,13 +137,21 @@ export default function ProductsPage() {
     }
   }
 
-  async function handleSave() {
-    if (!validate()) return
-    setSaving(true)
-    try {
-      const body = { ...form, base_price: +form.price, stock: +form.stock || 0 }
-      if (editItem) {
-        await updateProduct(editItem.id, body)
+async function handleSave() {
+  if (!validate()) return
+  setSaving(true)
+  try {
+    const body = { 
+      ...form, 
+      variant_id: editItem?.variant_id, // 🔥 PASS THE VARIANT ID
+      base_price: +form.price, 
+      stock: +form.stock || 0 
+    }
+    
+    if (editItem) {
+      // Use the parent ID for the URL, but the variant_id in the body
+      await updateProduct(editItem.id, body) 
+// ... rest of code
         toast('Product updated', 'success')
       } else {
         await createProduct(body)
