@@ -32,12 +32,21 @@ export default function DashboardPage() {
           <div className="stat-card" key={s.key}>
             <div className="stat-card-stripe" style={{ background: `linear-gradient(90deg, ${s.c1}, ${s.c2})` }} />
             <div className="stat-label">{s.label}</div>
-            <div className="stat-value">
-              {/* Using dynamic bracket notation: stats['revenue']?.total */}
-              {loading ? '—' : s.key === 'revenue'
-                ? `₹${Number(stats[s.key]?.total ?? 0).toLocaleString('en-IN')}`
-                : String(stats[s.key]?.total ?? 0)}
-            </div>
+
+
+<div className="stat-value">
+  {loading ? '—' : s.key === 'revenue'
+    ? `₹${Number(stats[s.key]?.total ?? 0).toLocaleString('en-IN')}`
+    : String(stats[s.key]?.total ?? 0)}
+</div>
+
+{!loading && s.key === 'products' && stats.products?.out_of_stock > 0 && (
+  <div style={{ fontSize: '11px', color: '#C43C3C', marginTop: '4px', fontWeight: 600 }}>
+    ⚠️ {stats.products.out_of_stock} items out of stock
+  </div>
+)}
+
+
             <div className="stat-icon" style={{ background: s.bg }}>{s.icon}</div>
           </div>
         ))}

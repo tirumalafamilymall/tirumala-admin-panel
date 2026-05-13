@@ -1,24 +1,21 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { getInstaLivePosts, createInstaPost, updateInstaPost, deleteInstaPost, linkProduct, unlinkProduct, searchProducts } from '@/lib/api'
-import { Modal, Confirm, Toggle, UploadZone, toast } from '@/components/admin/ui'
+import { Modal, Confirm, Toggle, toast } from '@/components/admin/ui'
+import { Camera, Link as LinkIcon, Trash2, Search, Package, ExternalLink, Loader2 } from 'lucide-react'
 
 const emptyForm = { title: '', instagramUrl: '', is_active: true }
 
 export default function InstaLivePage() {
-  // Always initialize as an empty array to prevent .map crashes
   const [posts, setPosts] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    loadPosts()
-  }, [])
+  useEffect(() => { loadPosts() }, [])
 
   async function loadPosts() {
     setLoading(true)
     try {
       const res = await getInstaLivePosts()
-      // Fix: Ensure we extract the posts array from the response object
       setPosts(res?.posts || [])
     } catch (e: any) {
       toast(e.message || 'Failed to load posts', 'error')
@@ -55,7 +52,7 @@ export default function InstaLivePage() {
         title: form.title || undefined,
         instagram_url: form.instagramUrl,
         is_active: form.is_active,
-        thumbnail: '📸' // Placeholder emoji for thumbnail
+        thumbnail: '📸' 
       }
 
       if (editItem) {
@@ -66,7 +63,7 @@ export default function InstaLivePage() {
         toast('Post created', 'success')
       }
       setAddOpen(false); setEditItem(null); setForm(emptyForm)
-      loadPosts() // Refresh from server
+      loadPosts() 
     } catch (e: any) { toast(e.message, 'error') }
     setSaving(false)
   }
@@ -111,132 +108,128 @@ export default function InstaLivePage() {
   return (
     <>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-        <div style={{ fontSize: 12.5, color: 'var(--ink-5)' }}>
-          {posts?.length || 0} posts · <a href="https://instagram.com/tirumalafamilymall777" target="_blank" style={{ color: 'var(--maroon)', fontWeight: 600 }}>@tirumalafamilymall777</a>
+        <div style={{ fontSize: 13, color: 'var(--ink-5)', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <Camera size={16} /> <strong>{posts?.length || 0}</strong> Live Sessions
         </div>
         <button className="btn btn-primary" onClick={() => { setForm(emptyForm); setEditItem(null); setErrors({}); setAddOpen(true) }}>
-          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 1v10M1 6h10"/></svg>
-          New Live Post
+          + New Live Post
         </button>
       </div>
 
       <div className="insta-grid">
         {loading ? (
-          <div style={{ color: 'var(--ink-5)', padding: 20 }}>Loading posts...</div>
+          <div style={{ padding: 40, textAlign: 'center' }}><Loader2 className="animate-spin mx-auto" /></div>
         ) : posts?.length > 0 ? (
           posts.map(p => (
             <div className="insta-card" key={p.id}>
               <div className="insta-thumb" style={{
-                background: p.is_active
-                  ? 'linear-gradient(135deg, var(--maroon-tint), var(--gold-tint))'
-                  : 'var(--cream-2)'
+                background: p.is_active ? 'linear-gradient(135deg, #7A1C1C, #C4922A)' : 'var(--cream-2)'
               }}>
                 {p.is_active && <div className="insta-live-badge">● LIVE</div>}
                 <span style={{ fontSize: 48 }}>{p.thumbnail || '📸'}</span>
               </div>
               <div className="insta-body">
-                <div className="insta-title">{p.title || 'Untitled'}</div>
+                <div className="insta-title">{p.title || 'Untitled Session'}</div>
                 <div className="insta-meta">
-                  {p.products?.length || 0} product{p.products?.length !== 1 ? 's' : ''} linked ·{' '}
-                  <span style={{ color: p.is_active ? 'var(--green)' : 'var(--ink-5)', fontWeight: 600 }}>
-                    {p.is_active ? 'Active' : 'Inactive'}
-                  </span>
+                  {p.products?.length || 0} Products Linked
                 </div>
                 <div className="insta-actions">
                   <button className="btn btn-xs" onClick={() => {
                     setForm({ title: p.title || '', instagramUrl: p.instagram_url, is_active: p.is_active })
                     setEditItem(p); setErrors({}); setAddOpen(true)
-                  }}>✏️ Edit</button>
-                  <button className="btn btn-xs" onClick={() => { setLinkPostId(p.id); setProdSearch(''); setSearchResults([]) }}>🔗 Products</button>
-                  <button className="btn btn-xs btn-danger" onClick={() => setDeleteItem(p)}>🗑️</button>
+                  }}>Edit</button>
+                  <button className="btn btn-xs" onClick={() => { setLinkPostId(p.id); setProdSearch(''); setSearchResults([]) }}>
+                    <LinkIcon size={12}/> Products
+                  </button>
+                  <button className="btn btn-xs btn-danger" onClick={() => setDeleteItem(p)}><Trash2 size={12}/></button>
                 </div>
               </div>
             </div>
           ))
         ) : (
-          <div className="insta-add-card" onClick={() => { setForm(emptyForm); setEditItem(null); setErrors({}); setAddOpen(true) }}>
+          <div className="insta-add-card" onClick={() => setAddOpen(true)}>
             <div className="insta-add-icon">+</div>
-            <div className="insta-add-label">New Insta Live Post</div>
+            <div className="insta-add-label">Setup First Post</div>
           </div>
         )}
       </div>
 
       <Modal open={addOpen} onClose={() => { setAddOpen(false); setEditItem(null) }}
-        title={editItem ? 'Edit Post' : 'New Insta Live Post'}
-        footer={<>
-          <button className="btn" onClick={() => { setAddOpen(false); setEditItem(null) }}>Cancel</button>
-          <button className="btn btn-primary" onClick={handleSave} disabled={saving}>{saving ? 'Saving…' : editItem ? 'Save Changes' : 'Create Post'}</button>
-        </>}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        title={editItem ? 'Update Session' : 'New Instagram Live'}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14, padding: '10px 0' }}>
           <div className="fgroup">
-            <label className="flabel">Title <span style={{ color: 'var(--ink-5)', fontWeight: 400, textTransform: 'none' }}>(optional)</span></label>
-            <input className="finput" placeholder="e.g. Saree Haul Apr 2026" value={form.title} onChange={e => fset('title', e.target.value)} />
+            <label className="flabel">Session Title</label>
+            <input className="finput" placeholder="e.g. Silk Saree Special" value={form.title} onChange={e => fset('title', e.target.value)} />
           </div>
           <div className="fgroup">
-            <label className="flabel">Instagram URL *</label>
-            <input className="finput" type="url" placeholder="https://www.instagram.com/reel/…" value={form.instagramUrl} onChange={e => fset('instagramUrl', e.target.value)} />
+            <label className="flabel">Instagram URL</label>
+            <input className="finput" type="url" placeholder="https://www.instagram.com/reel/..." value={form.instagramUrl} onChange={e => fset('instagramUrl', e.target.value)} />
             {errors.instagramUrl && <div className="ferror">{errors.instagramUrl}</div>}
           </div>
           <div className="fgroup" style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-            <label className="flabel" style={{ margin: 0 }}>Active</label>
+            <label className="flabel" style={{ margin: 0 }}>Active on Store</label>
             <Toggle checked={form.is_active} onChange={v => fset('is_active', v)} />
-            <span style={{ fontSize: 12, color: 'var(--ink-5)' }}>Show on store</span>
           </div>
+          <button className="btn btn-primary" onClick={handleSave} disabled={saving} style={{ marginTop: 10 }}>
+            {saving ? 'Processing...' : 'Save Session'}
+          </button>
         </div>
       </Modal>
 
-      <Modal open={!!linkPostId} onClose={() => setLinkPostId(null)} title={`Products — ${linkPost?.title || 'Post'}`} wide
-        footer={<button className="btn btn-primary" onClick={() => setLinkPostId(null)}>Done</button>}>
-        <div className="fgroup" style={{ marginBottom: 12 }}>
-          <label className="flabel">Search & Link Products</label>
+      <Modal open={!!linkPostId} onClose={() => setLinkPostId(null)} title="Link Products to Session" wide>
+        <div className="fgroup" style={{ marginBottom: 16 }}>
           <div className="filter-search">
-            <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="6.5" cy="6.5" r="5"/><path d="M11 11l3 3"/></svg>
-            <input type="text" placeholder="Search products…" value={prodSearch} onChange={e => handleSearch(e.target.value)} />
+            <Search size={14} />
+            <input type="text" placeholder="Search by name or code..." value={prodSearch} onChange={e => handleSearch(e.target.value)} />
           </div>
         </div>
 
-{searchResults?.length > 0 && (
-          <div style={{ border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden', marginBottom: 14 }}>
+        {searchResults?.length > 0 && (
+          <div style={{ border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden', marginBottom: 20, background: 'var(--cream-1)' }}>
             {searchResults.map((r: any) => (
-              <div key={r.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', borderBottom: '1px solid rgba(234,216,204,.4)', fontSize: 12.5 }}>
-                
-                {/* Updated this section to show Category cleanly */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                  <span style={{ fontWeight: 500 }}>{r.name}</span>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span style={{ fontSize: 10, color: 'var(--ink-5)', background: 'var(--cream-2)', padding: '2px 6px', borderRadius: 4, fontWeight: 600 }}>
-                      {r.category || 'Uncategorized'}
-                    </span>
-                    <span style={{ color: 'var(--ink-4)', fontWeight: 500 }}>
-                      ₹{(r.base_price ?? 0).toLocaleString('en-IN')}
+              <div key={r.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 15px', borderBottom: '1px solid var(--border)' }}>
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <span style={{ fontWeight: 600, fontSize: 13 }}>{r.name}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 2 }}>
+                    <span style={{ fontSize: 10, color: 'var(--ink-5)', background: 'var(--cream-3)', padding: '2px 6px', borderRadius: 4 }}>{r.category}</span>
+                    <span style={{ fontSize: 11, fontWeight: 700 }}>₹{Number(r.base_price || 0).toLocaleString('en-IN')}</span>
+                    <span style={{ fontSize: 10, color: r.stock > 0 ? 'var(--green)' : 'var(--maroon)' }}>
+                       {r.stock > 0 ? `${r.stock} in stock` : 'Out of Stock'}
                     </span>
                   </div>
                 </div>
-
-                <button className="btn btn-xs btn-green" onClick={() => linkPostId && handleLinkProduct(linkPostId, r)}>+ Link</button>
+                <button className="btn btn-xs btn-primary" onClick={() => linkPostId && handleLinkProduct(linkPostId, r)}>+ Link</button>
               </div>
             ))}
           </div>
         )}
 
-        <div className="section-title" style={{ marginTop: 4 }}>Linked Products ({linkPost?.products?.length || 0})</div>
-        {!linkPost?.products || linkPost.products.length === 0
-          ? <div style={{ padding: '16px 0', textAlign: 'center', color: 'var(--ink-5)', fontSize: 13 }}>No products linked yet.</div>
-          : <div className="linked-prod-list">
-              {linkPost.products.map((p: any) => (
-                <div key={p.id} className="linked-prod-row" style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid var(--border)' }}>
-                  <div>
-                    <span style={{ fontWeight: 500 }}>{p.product?.name || p.name}</span>
+        <div className="card-title" style={{ fontSize: 14, marginBottom: 12 }}>Currently Linked ({linkPost?.products?.length || 0})</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {!linkPost?.products?.length ? (
+            <div style={{ padding: 20, textAlign: 'center', color: 'var(--ink-4)', fontSize: 13 }}>No products linked to this session.</div>
+          ) : linkPost.products.map((p: any) => (
+            <div key={p.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px', background: 'white', border: '1px solid var(--border)', borderRadius: 10 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <Package size={14} style={{ color: 'var(--ink-4)' }} />
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 600 }}>{p.product?.name || p.name}</div>
+                  <div style={{ fontSize: 11, color: 'var(--ink-5)' }}>
+                    ₹{Number(p.product?.base_price || 0).toLocaleString('en-IN')} · {p.product?.stock} Total Stock
                   </div>
-                  <button className="btn btn-xs btn-danger" onClick={() => linkPostId && handleUnlinkProduct(linkPostId, p.product?.id || p.id)}>Remove</button>
                 </div>
-              ))}
-            </div>}
+              </div>
+              <button className="btn btn-xs btn-danger" onClick={() => linkPostId && handleUnlinkProduct(linkPostId, p.product?.id || p.id)}>Unlink</button>
+            </div>
+          ))}
+        </div>
+        <div style={{ marginTop: 20, textAlign: 'right' }}>
+          <button className="btn" onClick={() => setLinkPostId(null)}>Close</button>
+        </div>
       </Modal>
 
       <Confirm open={!!deleteItem} onClose={() => setDeleteItem(null)} onConfirm={handleDelete}
-        title="Delete Post" message={`Delete "${deleteItem?.title || 'this post'}"? This will remove it from the storefront.`}
-        icon="🗑️" confirmLabel="Yes, Delete" />
+        title="Remove Session" message="Are you sure you want to delete this Instagram Live session?" />
     </>
   )
 }

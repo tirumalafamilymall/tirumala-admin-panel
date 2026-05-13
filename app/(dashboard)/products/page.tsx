@@ -9,6 +9,7 @@ type Product = {
   id: string
   product_code: string
   name: string
+  department: string 
   category: string
   brand?: string
   base_price: number
@@ -32,7 +33,9 @@ type ZipResult = {
 }
 
 const PROD_EMOJIS: Record<string,string> = { Sarees:'🥻', Kurtis:'👗', 'Kids Wear':'👚', 'Men Shirts':'👕', Nightwear:'🌙', Accessories:'💍', default:'🛍️' }
-const emptyForm = { product_code:'', name:'', category:'', subcategory:'', brand:'', price:'', stock:'', color:'', size:'', barcode:'', is_active:true, images: [] as string[] }
+
+// ADDED department to emptyForm
+const emptyForm = { product_code:'', name:'', department:'', category:'', subcategory:'', brand:'', price:'', stock:'', color:'', size:'', barcode:'', is_active:true, images: [] as string[] }
 
 export default function ProductsPage() {
   const [products,    setProducts]    = useState<Product[]>([])
@@ -99,6 +102,7 @@ export default function ProductsPage() {
   function validate() {
     const errs: Record<string,string> = {}
     if (!form.name.trim()) errs.name = 'Name is required'
+    if (!form.department)  errs.department = 'Department is required' // <-- ADDED VALIDATION
     if (!form.category)    errs.category = 'Category is required'
     if (!form.price || isNaN(+form.price)) errs.price = 'Valid price required'
     setFormErrors(errs)
@@ -150,8 +154,8 @@ export default function ProductsPage() {
 
 function openEdit(p: Product) {
     setForm({
-      product_code: p.product_code || '', // <--- ADD THIS
-      name: p.name, category: p.category, subcategory: p.subcategory || '',
+      product_code: p.product_code || '', 
+      name: p.name, department: p.department || '', category: p.category, subcategory: p.subcategory || '', // <-- Added department
       brand: p.brand || '', price: String(p.base_price), stock: String(p.stock),
       color: p.color || '', size: p.size || '', barcode: p.barcode || '', is_active: p.is_active,
       images: p.images || []
@@ -311,7 +315,6 @@ function openEdit(p: Product) {
           <input type="text" placeholder="Search by name, code, category…" value={search} onChange={e => { setSearch(e.target.value); setPage(1) }} />
         </div>
         
-        {/* Error 1: Fixed malformed JSX in Category Dropdown */}
         <select className="flt-select" value={catFilter} onChange={e => { setCatFilter(e.target.value); setPage(1) }}>
           <option value="">All Categories</option>
           {categories.map(c => <option key={c}>{c}</option>)}
@@ -338,17 +341,17 @@ function openEdit(p: Product) {
         <div className="tbl-wrap">
           <table>
             <thead>
-              <tr><th>Image</th><th>Code</th><th>Name</th><th>Category</th><th>Brand</th><th>Price</th><th>Stock</th><th>Status</th><th>Actions</th></tr>
+              {/* Added Dept column */}
+              <tr><th>Image</th><th>Code</th><th>Name</th><th>Dept</th><th>Category</th><th>Brand</th><th>Price</th><th>Stock</th><th>Status</th><th>Actions</th></tr>
             </thead>
             <tbody>
               {loading
-                ? <SkeletonRows cols={9} />
+                ? <SkeletonRows cols={10} />
                 : products.length === 0
-                ? <tr><td colSpan={9} style={{ textAlign:'center', padding:40, color:'var(--ink-5)' }}>No products found</td></tr>
+                ? <tr><td colSpan={10} style={{ textAlign:'center', padding:40, color:'var(--ink-5)' }}>No products found</td></tr>
                 : products.map(p => (
                   <tr key={p.id} style={{ background: p.stock === 0 ? 'rgba(254,240,240,.4)' : undefined }}>
                     
-                    {/* Error 2: Fixed orphaned <td> block without wrapper */}
                     <td>
                       <div 
                         className="prod-thumb" 
@@ -367,12 +370,13 @@ function openEdit(p: Product) {
 
                     <td><span style={{ fontFamily:'monospace', fontSize:11, color:'var(--ink-5)', background:'var(--cream-2)', padding:'2px 6px', borderRadius:4 }}>{p.product_code}</span></td>
                     <td style={{ fontWeight:600 }}>{p.name}</td>
+                    {/* Added Dept Badge */}
+                    <td><span className={`badge badge-${p.department === 'WOMEN' ? 'DELIVERED' : p.department === 'MEN' ? 'CONFIRMED' : 'PENDING'}`}>{p.department}</span></td>
                     <td><span className="badge badge-USER">{p.category}</span></td>
                     <td style={{ fontSize:12, color:'var(--ink-4)' }}>{p.brand || '—'}</td>
                     <td style={{ fontWeight:700 }}>₹{p.base_price.toLocaleString('en-IN')}</td>
                     <td><StockBadge stock={p.stock} /></td>
                     
-                    {/* Error 3: Replaced redundant text node outside tag */}
                     <td><Toggle checked={p.is_active} onChange={() => toggleActive(p)} disabled={togglingId === p.id} /></td>
                     
                     <td>
@@ -398,22 +402,31 @@ function openEdit(p: Product) {
         </>}>
         
         <div className="form-grid">
-         {/* Typable Product Code */}
-          <div className="fgroup">
+         <div className="fgroup">
             <label className="flabel">Product Code</label>
             <input 
               className="finput" 
               placeholder="Leave blank to auto-generate" 
               value={form.product_code} 
               onChange={e => fset('product_code', e.target.value.toUpperCase())} 
-              disabled={!!editItem} // Optional: Prevents changing code AFTER creation to avoid DB breaking
+              disabled={!!editItem} 
             />
           </div>
 
-         
           <div className="fgroup"><label className="flabel">Name *</label><input className="finput" placeholder="e.g. Silk Blend Saree" value={form.name} onChange={e => fset('name',e.target.value)} />{formErrors.name && <div className="ferror">{formErrors.name}</div>}</div>
           
- {/* Typable Category with Dropdown Datalist */}
+          {/* NEW DEPARTMENT DROPDOWN */}
+          <div className="fgroup">
+            <label className="flabel">Department *</label>
+            <select className="finput" value={form.department} onChange={e => fset('department', e.target.value)}>
+              <option value="">Select Department...</option>
+              <option value="WOMEN">Women</option>
+              <option value="MEN">Men</option>
+              <option value="KIDS">Kids</option>
+            </select>
+            {formErrors.department && <div className="ferror">{formErrors.department}</div>}
+          </div>
+
           <div className="fgroup">
             <label className="flabel">Category *</label>
             <input 
