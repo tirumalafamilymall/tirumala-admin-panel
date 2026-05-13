@@ -6,15 +6,18 @@ import { API_BASE } from '@/lib/api'
 import { Modal, Confirm, Toggle, StockBadge, SkeletonRows, Pagination, UploadZone, toast } from '@/components/admin/ui'
 
 type Product = {
-  id: string
+  id: string           // Parent ID
+  variant_id: string   // 🔥 Added: Specific Variant ID
   product_code: string
+  sku: string          // 🔥 Added: Unique SKU
   name: string
   department: string 
   category: string
   brand?: string
   base_price: number
   stock: number
-  images: string[]
+  images: string[]     // Parent images
+  image?: string       // 🔥 Added: Specific Variant Image
   is_active: boolean
   subcategory?: string
   color?: string
@@ -335,63 +338,102 @@ function openEdit(p: Product) {
           <button className="btn" style={{ background:'var(--cream-2)', border:'1px solid var(--border)' }} onClick={() => { setZipResult(null); setZipOpen(true) }}>📸 Images ZIP</button>
         </div>
       </div>
+{/* Table */}
+<div className="card">
+  <div className="tbl-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Image</th>
+          <th>SKU / Code</th>
+          <th>Name</th>
+          <th>Specs</th>
+          <th>Dept</th>
+          <th>Category</th>
+          <th>Price</th>
+          <th>Stock</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {loading ? (
+          <SkeletonRows cols={10} />
+        ) : products.length === 0 ? (
+          <tr>
+            <td colSpan={10} style={{ textAlign: 'center', padding: 40, color: 'var(--ink-5)' }}>
+              No products found
+            </td>
+          </tr>
+        ) : ( // 🔥 ADDED THIS PARENTHESES AND COLON
+          products.map((p) => (
+            <tr key={p.variant_id || p.id} style={{ background: p.stock === 0 ? 'rgba(254,240,240,.4)' : undefined }}>
+              <td>
+                <div
+                  className="prod-thumb"
+                  style={{
+                    background: p.stock === 0 ? '#FEF0F0' : 'var(--cream-2)',
+                    cursor: 'zoom-in',
+                  }}
+                  onClick={() => (p.image || p.images?.[0]) && setPreviewImage(p.image || p.images[0])}
+                >
+                  {p.image || p.images?.[0] ? (
+                    <img src={p.image || p.images[0]} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 6 }} />
+                  ) : (
+                    PROD_EMOJIS[p.category] || PROD_EMOJIS.default
+                  )}
+                </div>
+              </td>
 
-      {/* Table */}
-      <div className="card">
-        <div className="tbl-wrap">
-          <table>
-            <thead>
-              {/* Added Dept column */}
-              <tr><th>Image</th><th>Code</th><th>Name</th><th>Dept</th><th>Category</th><th>Brand</th><th>Price</th><th>Stock</th><th>Status</th><th>Actions</th></tr>
-            </thead>
-            <tbody>
-              {loading
-                ? <SkeletonRows cols={10} />
-                : products.length === 0
-                ? <tr><td colSpan={10} style={{ textAlign:'center', padding:40, color:'var(--ink-5)' }}>No products found</td></tr>
-                : products.map(p => (
-                  <tr key={p.id} style={{ background: p.stock === 0 ? 'rgba(254,240,240,.4)' : undefined }}>
-                    
-                    <td>
-                      <div 
-                        className="prod-thumb" 
-                        style={{ 
-                          background: p.stock === 0 ? '#FEF0F0' : 'var(--cream-2)', 
-                          overflow: 'hidden',
-                          cursor: p.images?.[0] ? 'zoom-in' : 'default'
-                        }}
-                        onClick={() => p.images?.[0] && setPreviewImage(p.images[0])}
-                      >
-                        {p.images?.[0]
-                          ? <img src={p.images[0]} alt={p.name} style={{ width:'100%', height:'100%', objectFit:'cover', borderRadius:6 }} />
-                          : (PROD_EMOJIS[p.category] || PROD_EMOJIS.default)}
-                      </div>
-                    </td>
+              <td>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  <span style={{ fontFamily: 'monospace', fontSize: 10, color: 'var(--ink-5)', background: 'var(--cream-2)', padding: '2px 6px', borderRadius: 4 }}>
+                    {p.sku || p.product_code}
+                  </span>
+                  <span style={{ fontSize: 9, color: 'var(--ink-3)', marginLeft: 6 }}>Code: {p.product_code}</span>
+                </div>
+              </td>
 
-                    <td><span style={{ fontFamily:'monospace', fontSize:11, color:'var(--ink-5)', background:'var(--cream-2)', padding:'2px 6px', borderRadius:4 }}>{p.product_code}</span></td>
-                    <td style={{ fontWeight:600 }}>{p.name}</td>
-                    {/* Added Dept Badge */}
-                    <td><span className={`badge badge-${p.department === 'WOMEN' ? 'DELIVERED' : p.department === 'MEN' ? 'CONFIRMED' : 'PENDING'}`}>{p.department}</span></td>
-                    <td><span className="badge badge-USER">{p.category}</span></td>
-                    <td style={{ fontSize:12, color:'var(--ink-4)' }}>{p.brand || '—'}</td>
-                    <td style={{ fontWeight:700 }}>₹{p.base_price.toLocaleString('en-IN')}</td>
-                    <td><StockBadge stock={p.stock} /></td>
-                    
-                    <td><Toggle checked={p.is_active} onChange={() => toggleActive(p)} disabled={togglingId === p.id} /></td>
-                    
-                    <td>
-                      <div style={{ display:'flex', gap:5 }}>
-                        <button className="btn btn-sm" onClick={() => openEdit(p)}>✏️ Edit</button>
-                        <button className="btn btn-sm btn-danger" onClick={() => setDeleteItem(p)}>🗑️</button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-            </tbody>
-          </table>
-        </div>
-        <Pagination page={page} total={Math.ceil(total / PER_PAGE)} perPage={PER_PAGE} totalItems={total} onChange={setPage} />
-      </div>
+              <td style={{ fontWeight: 600 }}>{p.name}</td>
+
+              <td>
+                <div style={{ display: 'flex', gap: 4 }}>
+                  {p.size && <span style={{ fontSize: 10, padding: '2px 5px', border: '1px solid var(--border)', borderRadius: 4 }}>{p.size}</span>}
+                  {p.color && <span style={{ fontSize: 10, padding: '2px 5px', border: '1px solid var(--border)', borderRadius: 4 }}>{p.color}</span>}
+                </div>
+              </td>
+
+              <td>
+                <span className={`badge badge-${p.department === 'WOMEN' ? 'DELIVERED' : p.department === 'MEN' ? 'CONFIRMED' : 'PENDING'}`}>
+                  {p.department}
+                </span>
+              </td>
+              <td>
+                <span className="badge badge-USER">{p.category}</span>
+              </td>
+              <td style={{ fontWeight: 700 }}>₹{p.base_price.toLocaleString('en-IN')}</td>
+              <td>
+                <StockBadge stock={p.stock} />
+              </td>
+
+              <td>
+                <Toggle checked={p.is_active} onChange={() => toggleActive(p)} disabled={togglingId === p.id} />
+              </td>
+
+              <td>
+                <div style={{ display: 'flex', gap: 5 }}>
+                  <button className="btn btn-sm" onClick={() => openEdit(p)}>✏️</button>
+                  <button className="btn btn-sm btn-danger" onClick={() => setDeleteItem(p)}>🗑️</button>
+                </div>
+              </td>
+            </tr>
+          ))
+        )}
+      </tbody>
+    </table>
+  </div>
+  <Pagination page={page} total={Math.ceil(total / PER_PAGE)} perPage={PER_PAGE} totalItems={total} onChange={setPage} />
+</div>
 
       {/* Add/Edit Modal */}
       <Modal open={addOpen} onClose={() => { setAddOpen(false); setEditItem(null) }}

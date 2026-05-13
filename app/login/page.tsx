@@ -47,12 +47,12 @@ export default function LoginPage() {
           <form onSubmit={handleLogin}>
             <div className="fgroup" style={{ marginBottom: 14 }}>
               <label className="flabel">Email Address</label>
-              <input className="finput" type="email" placeholder="admin@gmail.com"
+              <input className="finput" type="email"
                 value={email} onChange={e => setEmail(e.target.value)} />
             </div>
             <div className="fgroup" style={{ marginBottom: 18 }}>
               <label className="flabel">Password</label>
-              <input className="finput" type="password" placeholder="••••••••"
+              <input className="finput" type="password"
                 value={password} onChange={e => setPassword(e.target.value)} />
             </div>
             <button type="submit" className="login-submit" disabled={loading}>
