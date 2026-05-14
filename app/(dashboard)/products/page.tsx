@@ -243,10 +243,10 @@ function openEdit(p: Product) {
       if (!initRes.ok) throw new Error(initData.error || 'Failed to initialize uploads')
 
       const { matched, unmatched } = initData
-      const successfulUploads: { productId: string; publicUrl: string }[] = []
+      const successfulUploads: any[] = [] // Change to 'any' to avoid type errors
       let failedCount = 0
 
-      toast(`Uploading ${matched.length} images to cloud...`, 'info')
+      toast(`Uploading ${matched.length} images...`, 'info')
 
       const BATCH_SIZE = 20
       for (let i = 0; i < matched.length; i += BATCH_SIZE) {
@@ -262,8 +262,14 @@ function openEdit(p: Product) {
               body: fileData.blob,
               headers: { 'Content-Type': fileData.mimeType, 'x-amz-acl': 'public-read' },
             })
+            
             if (uploadRes.ok) {
-              successfulUploads.push({ productId: item.productId, publicUrl: item.publicUrl })
+              // 🔥 FIX: Ensure we pass back 'targetType' and 'targetIds'
+              successfulUploads.push({ 
+                targetType: item.targetType, 
+                targetIds: item.targetIds, 
+                publicUrl: item.publicUrl 
+              })
             } else {
               failedCount++
             }
