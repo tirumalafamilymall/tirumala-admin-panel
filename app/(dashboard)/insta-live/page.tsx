@@ -1,6 +1,8 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { getInstaLivePosts, createInstaPost, updateInstaPost, deleteInstaPost, linkProduct, unlinkProduct, searchProducts } from '@/lib/api'
+import Link from 'next/link' // 🔥 Added Next.js Link
+// 🔥 Changed searchProducts to searchProductsForLink
+import { getInstaLivePosts, createInstaPost, updateInstaPost, deleteInstaPost, linkProduct, unlinkProduct, searchProductsForLink } from '@/lib/api'
 import { Modal, Confirm, Toggle, toast } from '@/components/admin/ui'
 import { Camera, Link as LinkIcon, Trash2, Search, Package, ExternalLink, Loader2 } from 'lucide-react'
 
@@ -82,7 +84,8 @@ export default function InstaLivePage() {
     setProdSearch(q)
     if (!q.trim()) { setSearchResults([]); return }
     try { 
-      const res = await searchProducts(q)
+      // 🔥 FIX: Now uses the Admin search so it can find hidden INSTA_LIVE products!
+      const res = await searchProductsForLink(q)
       setSearchResults(res.products || []) 
     } catch { setSearchResults([]) }
   }
@@ -111,9 +114,15 @@ export default function InstaLivePage() {
         <div style={{ fontSize: 13, color: 'var(--ink-5)', display: 'flex', alignItems: 'center', gap: 8 }}>
           <Camera size={16} /> <strong>{posts?.length || 0}</strong> Live Sessions
         </div>
-        <button className="btn btn-primary" onClick={() => { setForm(emptyForm); setEditItem(null); setErrors({}); setAddOpen(true) }}>
-          + New Live Post
-        </button>
+        <div style={{ display: 'flex', gap: 10 }}>
+          {/* 🔥 NEW: Quick link to go upload products */}
+          <Link href="/products" className="btn" style={{ background: 'var(--cream-2)', border: '1px solid var(--border)' }}>
+            📦 Upload Products
+          </Link>
+          <button className="btn btn-primary" onClick={() => { setForm(emptyForm); setEditItem(null); setErrors({}); setAddOpen(true) }}>
+            + New Live Post
+          </button>
+        </div>
       </div>
 
       <div className="insta-grid">
@@ -189,7 +198,11 @@ export default function InstaLivePage() {
             {searchResults.map((r: any) => (
               <div key={r.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 15px', borderBottom: '1px solid var(--border)' }}>
                 <div style={{ display: 'flex', flexDirection: 'column' }}>
-                  <span style={{ fontWeight: 600, fontSize: 13 }}>{r.name}</span>
+                  <span style={{ fontWeight: 600, fontSize: 13 }}>
+                    {r.name} 
+                    {/* 🔥 Shows a badge in search so you know it's an exclusive */}
+                    {r.sales_channel === 'INSTA_LIVE' && <span style={{ marginLeft: 6, fontSize: 9, color: '#BE185D', background: '#FCE7F3', padding: '2px 4px', borderRadius: 4 }}>EXCLUSIVE</span>}
+                  </span>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 2 }}>
                     <span style={{ fontSize: 10, color: 'var(--ink-5)', background: 'var(--cream-3)', padding: '2px 6px', borderRadius: 4 }}>{r.category}</span>
                     <span style={{ fontSize: 11, fontWeight: 700 }}>₹{Number(r.base_price || 0).toLocaleString('en-IN')}</span>

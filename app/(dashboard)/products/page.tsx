@@ -23,6 +23,7 @@ type Product = {
   color?: string
   size?: string
   barcode?: string
+  sales_channel?: string // 🔥 NEW: Added sales_channel to type
 }
 
 type ExcelResult = {
@@ -37,7 +38,8 @@ type ZipResult = {
 
 const PROD_EMOJIS: Record<string,string> = { Sarees:'🥻', Kurtis:'👗', 'Kids Wear':'👚', 'Men Shirts':'👕', Nightwear:'🌙', Accessories:'💍', default:'🛍️' }
 
-const emptyForm = { product_code:'', name:'', department:'', category:'', subcategory:'', brand:'', price:'', stock:'', color:'', size:'', barcode:'', is_active:true, images: [] as string[] }
+// 🔥 NEW: Added sales_channel to empty form
+const emptyForm = { product_code:'', name:'', department:'', category:'', subcategory:'', brand:'', price:'', stock:'', color:'', size:'', barcode:'', is_active:true, sales_channel: 'MAIN_STORE', images: [] as string[] }
 
 export default function ProductsPage() {
   const [products,    setProducts]    = useState<Product[]>([])
@@ -166,6 +168,7 @@ export default function ProductsPage() {
       name: p.name, department: p.department || '', category: p.category, subcategory: p.subcategory || '',
       brand: p.brand || '', price: String(p.base_price), stock: String(p.stock),
       color: p.color || '', size: p.size || '', barcode: p.barcode || '', is_active: p.is_active,
+      sales_channel: p.sales_channel || 'MAIN_STORE', // 🔥 NEW: Load sales channel for editing
       images: p.images || []
     })
     setEditItem(p); setAddOpen(true)
@@ -355,7 +358,6 @@ export default function ProductsPage() {
           <table>
             <thead>
               <tr>
-                {/* ✅ READABILITY: Added letterSpacing + slightly muted header bg via className, no color change */}
                 <th style={{ fontSize: 10.5, letterSpacing: '0.06em' }}>Image</th>
                 <th style={{ fontSize: 10.5, letterSpacing: '0.06em' }}>SKU / Code</th>
                 <th style={{ fontSize: 10.5, letterSpacing: '0.06em' }}>Name</th>
@@ -379,23 +381,19 @@ export default function ProductsPage() {
                 </tr>
               ) : (
                 products.map((p) => (
-                  // ✅ READABILITY: Added borderBottom for crisp row separation
                   <tr
                     key={p.variant_id || p.id}
                     style={{
                       background: p.stock === 0 ? 'rgba(254,240,240,.4)' : undefined,
                       borderBottom: '1px solid var(--border)',
                     }}
-                    // ✅ READABILITY: Hover highlight via inline onMouseEnter/Leave
                     onMouseEnter={e => { if (p.stock !== 0) (e.currentTarget as HTMLTableRowElement).style.background = 'var(--cream-2)' }}
                     onMouseLeave={e => { if (p.stock !== 0) (e.currentTarget as HTMLTableRowElement).style.background = '' }}
                   >
-                    {/* ✅ READABILITY: td padding increased to 12px 14px for breathing room */}
                     <td style={{ padding: '12px 14px', verticalAlign: 'middle' }}>
                       <div
                         className="prod-thumb"
                         style={{
-                          // ✅ READABILITY: Increased thumb to 44×44 for better image visibility
                           width: 44,
                           height: 44,
                           background: p.stock === 0 ? '#FEF0F0' : 'var(--cream-2)',
@@ -420,10 +418,16 @@ export default function ProductsPage() {
                       </div>
                     </td>
 
-                    {/* ✅ READABILITY: max-width + lineHeight so long names wrap neatly */}
-                    <td style={{ padding: '12px 14px', verticalAlign: 'middle', fontWeight: 600, maxWidth: 200, lineHeight: 1.35 }}>{p.name}</td>
+                    <td style={{ padding: '12px 14px', verticalAlign: 'middle', fontWeight: 600, maxWidth: 200, lineHeight: 1.35 }}>
+                      {p.name}
+                      {/* 🔥 NEW: Show badge in table if it's an Insta Live product */}
+                      {p.sales_channel === 'INSTA_LIVE' && (
+                        <span style={{ display: 'inline-block', marginLeft: 8, fontSize: 9, background: '#FCE7F3', color: '#BE185D', padding: '2px 6px', borderRadius: 4, verticalAlign: 'middle' }}>
+                          INSTA LIVE
+                        </span>
+                      )}
+                    </td>
 
-                    {/* ✅ READABILITY: whiteSpace nowrap on chips prevents mid-word breaks */}
                     <td style={{ padding: '12px 14px', verticalAlign: 'middle' }}>
                       <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
                         {p.size && (
@@ -548,10 +552,24 @@ export default function ProductsPage() {
             )}
           </div>
           
+          {/* 🔥 NEW: Insta Live Exclusive Toggle */}
+          <div className="fgroup full" style={{ flexDirection:'row', alignItems:'center', gap:12, background: 'var(--cream-1)', padding: 12, borderRadius: 8 }}>
+            <div style={{ flex: 1 }}>
+              <label className="flabel" style={{ margin:0, color: '#BE185D' }}>Insta Live Exclusive</label>
+              <div style={{ fontSize:11, color:'var(--ink-4)', marginTop: 2 }}>
+                Hide from main store. Only visible on the dedicated Insta Live page.
+              </div>
+            </div>
+            <Toggle 
+              checked={form.sales_channel === 'INSTA_LIVE'} 
+              onChange={v => fset('sales_channel', v ? 'INSTA_LIVE' : 'MAIN_STORE')} 
+            />
+          </div>
+
           <div className="fgroup full" style={{ flexDirection:'row', alignItems:'center', gap:12 }}>
             <label className="flabel" style={{ margin:0 }}>Active</label>
             <Toggle checked={form.is_active} onChange={v => fset('is_active',v)} />
-            <span style={{ fontSize:12, color:'var(--ink-5)' }}>Product visible on storefront</span>
+            <span style={{ fontSize:12, color:'var(--ink-5)' }}>Product available for purchase</span>
           </div>
         </div>
       </Modal>
@@ -569,6 +587,9 @@ export default function ProductsPage() {
       {/* Excel Upload Modal */}
       <Modal open={excelOpen} onClose={() => setExcelOpen(false)} title="Excel / CSV Upload" wide
         footer={<button className="btn" onClick={() => setExcelOpen(false)}>Close</button>}>
+        <div style={{ marginBottom: 14, fontSize: 13, color: 'var(--ink-4)' }}>
+          <strong>Tip:</strong> Add a column named <code>sales_channel</code> and enter <code>INSTA_LIVE</code> to automatically mark products as Instagram Exclusives.
+        </div>
         <UploadZone label="Drag & drop your file here" subLabel="Accepts .xlsx · .xls · .csv" onFile={handleExcelFile} />
         {excelResult && (
           <div style={{ marginTop:16 }}>
