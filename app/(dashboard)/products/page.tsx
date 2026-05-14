@@ -6,18 +6,18 @@ import { API_BASE } from '@/lib/api'
 import { Modal, Confirm, Toggle, StockBadge, SkeletonRows, Pagination, UploadZone, toast } from '@/components/admin/ui'
 
 type Product = {
-  id: string           // Parent ID
-  variant_id: string   // 🔥 Added: Specific Variant ID
+  id: string
+  variant_id: string
   product_code: string
-  sku: string          // 🔥 Added: Unique SKU
+  sku: string
   name: string
   department: string 
   category: string
   brand?: string
   base_price: number
   stock: number
-  images: string[]     // Parent images
-  image?: string       // 🔥 Added: Specific Variant Image
+  images: string[]
+  image?: string
   is_active: boolean
   subcategory?: string
   color?: string
@@ -37,7 +37,6 @@ type ZipResult = {
 
 const PROD_EMOJIS: Record<string,string> = { Sarees:'🥻', Kurtis:'👗', 'Kids Wear':'👚', 'Men Shirts':'👕', Nightwear:'🌙', Accessories:'💍', default:'🛍️' }
 
-// ADDED department to emptyForm
 const emptyForm = { product_code:'', name:'', department:'', category:'', subcategory:'', brand:'', price:'', stock:'', color:'', size:'', barcode:'', is_active:true, images: [] as string[] }
 
 export default function ProductsPage() {
@@ -105,7 +104,7 @@ export default function ProductsPage() {
   function validate() {
     const errs: Record<string,string> = {}
     if (!form.name.trim()) errs.name = 'Name is required'
-    if (!form.department)  errs.department = 'Department is required' // <-- ADDED VALIDATION
+    if (!form.department)  errs.department = 'Department is required'
     if (!form.category)    errs.category = 'Category is required'
     if (!form.price || isNaN(+form.price)) errs.price = 'Valid price required'
     setFormErrors(errs)
@@ -137,21 +136,19 @@ export default function ProductsPage() {
     }
   }
 
-async function handleSave() {
-  if (!validate()) return
-  setSaving(true)
-  try {
-    const body = { 
-      ...form, 
-      variant_id: editItem?.variant_id, // 🔥 PASS THE VARIANT ID
-      base_price: +form.price, 
-      stock: +form.stock || 0 
-    }
-    
-    if (editItem) {
-      // Use the parent ID for the URL, but the variant_id in the body
-      await updateProduct(editItem.id, body) 
-// ... rest of code
+  async function handleSave() {
+    if (!validate()) return
+    setSaving(true)
+    try {
+      const body = { 
+        ...form, 
+        variant_id: editItem?.variant_id,
+        base_price: +form.price, 
+        stock: +form.stock || 0 
+      }
+      
+      if (editItem) {
+        await updateProduct(editItem.id, body) 
         toast('Product updated', 'success')
       } else {
         await createProduct(body)
@@ -163,10 +160,10 @@ async function handleSave() {
     setSaving(false)
   }
 
-function openEdit(p: Product) {
+  function openEdit(p: Product) {
     setForm({
       product_code: p.product_code || '', 
-      name: p.name, department: p.department || '', category: p.category, subcategory: p.subcategory || '', // <-- Added department
+      name: p.name, department: p.department || '', category: p.category, subcategory: p.subcategory || '',
       brand: p.brand || '', price: String(p.base_price), stock: String(p.stock),
       color: p.color || '', size: p.size || '', barcode: p.barcode || '', is_active: p.is_active,
       images: p.images || []
@@ -243,7 +240,7 @@ function openEdit(p: Product) {
       if (!initRes.ok) throw new Error(initData.error || 'Failed to initialize uploads')
 
       const { matched, unmatched } = initData
-      const successfulUploads: any[] = [] // Change to 'any' to avoid type errors
+      const successfulUploads: any[] = []
       let failedCount = 0
 
       toast(`Uploading ${matched.length} images...`, 'info')
@@ -264,7 +261,6 @@ function openEdit(p: Product) {
             })
             
             if (uploadRes.ok) {
-              // 🔥 FIX: Ensure we pass back 'targetType' and 'targetIds'
               successfulUploads.push({ 
                 targetType: item.targetType, 
                 targetIds: item.targetIds, 
@@ -352,102 +348,133 @@ function openEdit(p: Product) {
           <button className="btn" style={{ background:'var(--cream-2)', border:'1px solid var(--border)' }} onClick={() => { setZipResult(null); setZipOpen(true) }}>📸 Images ZIP</button>
         </div>
       </div>
-{/* Table */}
-<div className="card">
-  <div className="tbl-wrap">
-    <table>
-      <thead>
-        <tr>
-          <th>Image</th>
-          <th>SKU / Code</th>
-          <th>Name</th>
-          <th>Specs</th>
-          <th>Dept</th>
-          <th>Category</th>
-          <th>Price</th>
-          <th>Stock</th>
-          <th>Status</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        {loading ? (
-          <SkeletonRows cols={10} />
-        ) : products.length === 0 ? (
-          <tr>
-            <td colSpan={10} style={{ textAlign: 'center', padding: 40, color: 'var(--ink-5)' }}>
-              No products found
-            </td>
-          </tr>
-        ) : ( // 🔥 ADDED THIS PARENTHESES AND COLON
-          products.map((p) => (
-            <tr key={p.variant_id || p.id} style={{ background: p.stock === 0 ? 'rgba(254,240,240,.4)' : undefined }}>
-              <td>
-                <div
-                  className="prod-thumb"
-                  style={{
-                    background: p.stock === 0 ? '#FEF0F0' : 'var(--cream-2)',
-                    cursor: 'zoom-in',
-                  }}
-                  onClick={() => (p.image || p.images?.[0]) && setPreviewImage(p.image || p.images[0])}
-                >
-                  {p.image || p.images?.[0] ? (
-                    <img src={p.image || p.images[0]} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 6 }} />
-                  ) : (
-                    PROD_EMOJIS[p.category] || PROD_EMOJIS.default
-                  )}
-                </div>
-              </td>
 
-              <td>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                  <span style={{ fontFamily: 'monospace', fontSize: 10, color: 'var(--ink-5)', background: 'var(--cream-2)', padding: '2px 6px', borderRadius: 4 }}>
-                    {p.sku || p.product_code}
-                  </span>
-                  <span style={{ fontSize: 9, color: 'var(--ink-3)', marginLeft: 6 }}>Code: {p.product_code}</span>
-                </div>
-              </td>
+      {/* Table */}
+      <div className="card">
+        <div className="tbl-wrap">
+          <table>
+            <thead>
+              <tr>
+                {/* ✅ READABILITY: Added letterSpacing + slightly muted header bg via className, no color change */}
+                <th style={{ fontSize: 10.5, letterSpacing: '0.06em' }}>Image</th>
+                <th style={{ fontSize: 10.5, letterSpacing: '0.06em' }}>SKU / Code</th>
+                <th style={{ fontSize: 10.5, letterSpacing: '0.06em' }}>Name</th>
+                <th style={{ fontSize: 10.5, letterSpacing: '0.06em' }}>Specs</th>
+                <th style={{ fontSize: 10.5, letterSpacing: '0.06em' }}>Dept</th>
+                <th style={{ fontSize: 10.5, letterSpacing: '0.06em' }}>Category</th>
+                <th style={{ fontSize: 10.5, letterSpacing: '0.06em' }}>Price</th>
+                <th style={{ fontSize: 10.5, letterSpacing: '0.06em' }}>Stock</th>
+                <th style={{ fontSize: 10.5, letterSpacing: '0.06em' }}>Status</th>
+                <th style={{ fontSize: 10.5, letterSpacing: '0.06em' }}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <SkeletonRows cols={10} />
+              ) : products.length === 0 ? (
+                <tr>
+                  <td colSpan={10} style={{ textAlign: 'center', padding: 40, color: 'var(--ink-5)' }}>
+                    No products found
+                  </td>
+                </tr>
+              ) : (
+                products.map((p) => (
+                  // ✅ READABILITY: Added borderBottom for crisp row separation
+                  <tr
+                    key={p.variant_id || p.id}
+                    style={{
+                      background: p.stock === 0 ? 'rgba(254,240,240,.4)' : undefined,
+                      borderBottom: '1px solid var(--border)',
+                    }}
+                    // ✅ READABILITY: Hover highlight via inline onMouseEnter/Leave
+                    onMouseEnter={e => { if (p.stock !== 0) (e.currentTarget as HTMLTableRowElement).style.background = 'var(--cream-2)' }}
+                    onMouseLeave={e => { if (p.stock !== 0) (e.currentTarget as HTMLTableRowElement).style.background = '' }}
+                  >
+                    {/* ✅ READABILITY: td padding increased to 12px 14px for breathing room */}
+                    <td style={{ padding: '12px 14px', verticalAlign: 'middle' }}>
+                      <div
+                        className="prod-thumb"
+                        style={{
+                          // ✅ READABILITY: Increased thumb to 44×44 for better image visibility
+                          width: 44,
+                          height: 44,
+                          background: p.stock === 0 ? '#FEF0F0' : 'var(--cream-2)',
+                          cursor: 'zoom-in',
+                        }}
+                        onClick={() => (p.image || p.images?.[0]) && setPreviewImage(p.image || p.images[0])}
+                      >
+                        {p.image || p.images?.[0] ? (
+                          <img src={p.image || p.images[0]} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 6 }} />
+                        ) : (
+                          PROD_EMOJIS[p.category] || PROD_EMOJIS.default
+                        )}
+                      </div>
+                    </td>
 
-              <td style={{ fontWeight: 600 }}>{p.name}</td>
+                    <td style={{ padding: '12px 14px', verticalAlign: 'middle' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                        <span style={{ fontFamily: 'monospace', fontSize: 10, color: 'var(--ink-5)', background: 'var(--cream-2)', padding: '2px 6px', borderRadius: 4 }}>
+                          {p.sku || p.product_code}
+                        </span>
+                        <span style={{ fontSize: 9, color: 'var(--ink-3)', marginLeft: 6 }}>Code: {p.product_code}</span>
+                      </div>
+                    </td>
 
-              <td>
-                <div style={{ display: 'flex', gap: 4 }}>
-                  {p.size && <span style={{ fontSize: 10, padding: '2px 5px', border: '1px solid var(--border)', borderRadius: 4 }}>{p.size}</span>}
-                  {p.color && <span style={{ fontSize: 10, padding: '2px 5px', border: '1px solid var(--border)', borderRadius: 4 }}>{p.color}</span>}
-                </div>
-              </td>
+                    {/* ✅ READABILITY: max-width + lineHeight so long names wrap neatly */}
+                    <td style={{ padding: '12px 14px', verticalAlign: 'middle', fontWeight: 600, maxWidth: 200, lineHeight: 1.35 }}>{p.name}</td>
 
-              <td>
-                <span className={`badge badge-${p.department === 'WOMEN' ? 'DELIVERED' : p.department === 'MEN' ? 'CONFIRMED' : 'PENDING'}`}>
-                  {p.department}
-                </span>
-              </td>
-              <td>
-                <span className="badge badge-USER">{p.category}</span>
-              </td>
-              <td style={{ fontWeight: 700 }}>₹{p.base_price.toLocaleString('en-IN')}</td>
-              <td>
-                <StockBadge stock={p.stock} />
-              </td>
+                    {/* ✅ READABILITY: whiteSpace nowrap on chips prevents mid-word breaks */}
+                    <td style={{ padding: '12px 14px', verticalAlign: 'middle' }}>
+                      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                        {p.size && (
+                          <span style={{ fontSize: 10, padding: '2px 6px', border: '1px solid var(--border)', borderRadius: 4, whiteSpace: 'nowrap', background: 'var(--cream-1)' }}>
+                            {p.size}
+                          </span>
+                        )}
+                        {p.color && (
+                          <span style={{ fontSize: 10, padding: '2px 6px', border: '1px solid var(--border)', borderRadius: 4, whiteSpace: 'nowrap', background: 'var(--cream-1)' }}>
+                            {p.color}
+                          </span>
+                        )}
+                      </div>
+                    </td>
 
-              <td>
-                <Toggle checked={p.is_active} onChange={() => toggleActive(p)} disabled={togglingId === p.id} />
-              </td>
+                    <td style={{ padding: '12px 14px', verticalAlign: 'middle' }}>
+                      <span className={`badge badge-${p.department === 'WOMEN' ? 'DELIVERED' : p.department === 'MEN' ? 'CONFIRMED' : 'PENDING'}`}>
+                        {p.department}
+                      </span>
+                    </td>
 
-              <td>
-                <div style={{ display: 'flex', gap: 5 }}>
-                  <button className="btn btn-sm" onClick={() => openEdit(p)}>✏️</button>
-                  <button className="btn btn-sm btn-danger" onClick={() => setDeleteItem(p)}>🗑️</button>
-                </div>
-              </td>
-            </tr>
-          ))
-        )}
-      </tbody>
-    </table>
-  </div>
-  <Pagination page={page} total={Math.ceil(total / PER_PAGE)} perPage={PER_PAGE} totalItems={total} onChange={setPage} />
-</div>
+                    <td style={{ padding: '12px 14px', verticalAlign: 'middle' }}>
+                      <span className="badge badge-USER">{p.category}</span>
+                    </td>
+
+                    <td style={{ padding: '12px 14px', verticalAlign: 'middle', fontWeight: 700 }}>
+                      ₹{p.base_price.toLocaleString('en-IN')}
+                    </td>
+
+                    <td style={{ padding: '12px 14px', verticalAlign: 'middle' }}>
+                      <StockBadge stock={p.stock} />
+                    </td>
+
+                    <td style={{ padding: '12px 14px', verticalAlign: 'middle' }}>
+                      <Toggle checked={p.is_active} onChange={() => toggleActive(p)} disabled={togglingId === p.id} />
+                    </td>
+
+                    <td style={{ padding: '12px 14px', verticalAlign: 'middle' }}>
+                      <div style={{ display: 'flex', gap: 5 }}>
+                        <button className="btn btn-sm" onClick={() => openEdit(p)}>✏️</button>
+                        <button className="btn btn-sm btn-danger" onClick={() => setDeleteItem(p)}>🗑️</button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+        <Pagination page={page} total={Math.ceil(total / PER_PAGE)} perPage={PER_PAGE} totalItems={total} onChange={setPage} />
+      </div>
 
       {/* Add/Edit Modal */}
       <Modal open={addOpen} onClose={() => { setAddOpen(false); setEditItem(null) }}
@@ -458,7 +485,7 @@ function openEdit(p: Product) {
         </>}>
         
         <div className="form-grid">
-         <div className="fgroup">
+          <div className="fgroup">
             <label className="flabel">Product Code</label>
             <input 
               className="finput" 
@@ -471,7 +498,6 @@ function openEdit(p: Product) {
 
           <div className="fgroup"><label className="flabel">Name *</label><input className="finput" placeholder="e.g. Silk Blend Saree" value={form.name} onChange={e => fset('name',e.target.value)} />{formErrors.name && <div className="ferror">{formErrors.name}</div>}</div>
           
-          {/* NEW DEPARTMENT DROPDOWN */}
           <div className="fgroup">
             <label className="flabel">Department *</label>
             <select className="finput" value={form.department} onChange={e => fset('department', e.target.value)}>
