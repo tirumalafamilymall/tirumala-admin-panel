@@ -152,4 +152,4 @@ export const uploadPresign = (filename: string, contentType: string) =>
   adminFetch(`/api/upload/presign?filename=${encodeURIComponent(filename)}&type=${encodeURIComponent(contentType)}`)
 
 export const searchProductsForLink = (query: string) => 
-  adminFetch(`/api/admin/products?search=${encodeURIComponent(query)}&limit=10`)
+  adminFetch(`/api/admin/products?search=${encodeURIComponent(query)}&limit=10&sales_channel=INSTA_LIVE`)
