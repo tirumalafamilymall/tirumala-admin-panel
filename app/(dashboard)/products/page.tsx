@@ -23,7 +23,7 @@ type Product = {
   color?: string
   size?: string
   barcode?: string
-  sales_channel?: string // 🔥 NEW: Added sales_channel to type
+  sales_channel?: string 
 }
 
 type ExcelResult = {
@@ -38,7 +38,6 @@ type ZipResult = {
 
 const PROD_EMOJIS: Record<string,string> = { Sarees:'🥻', Kurtis:'👗', 'Kids Wear':'👚', 'Men Shirts':'👕', Nightwear:'🌙', Accessories:'💍', default:'🛍️' }
 
-// 🔥 NEW: Added sales_channel to empty form
 const emptyForm = { product_code:'', name:'', department:'', category:'', subcategory:'', brand:'', price:'', stock:'', color:'', size:'', barcode:'', is_active:true, sales_channel: 'MAIN_STORE', images: [] as string[] }
 
 export default function ProductsPage() {
@@ -48,6 +47,7 @@ export default function ProductsPage() {
   const [search,      setSearch]      = useState('')
   const [catFilter,   setCatFilter]   = useState('')
   const [statusFilter,setStatusFilter]= useState('')
+  const [instaLiveFilter, setInstaLiveFilter] = useState(false) // 🔥 NEW: Added toggle filter state
   const [page,        setPage]        = useState(1)
   const [addOpen,     setAddOpen]     = useState(false)
   const [editItem,    setEditItem]    = useState<Product | null>(null)
@@ -76,6 +76,7 @@ export default function ProductsPage() {
         search:    search || undefined,
         category:  catFilter || undefined,
         is_active: statusFilter === 'active' ? true : statusFilter === 'inactive' ? false : undefined,
+        sales_channel: instaLiveFilter ? 'INSTA_LIVE' : undefined, // 🔥 NEW: Passes data target to public API lookup router
       })
       setProducts(res.products ?? [])
       setTotal(res.total ?? 0)
@@ -84,7 +85,7 @@ export default function ProductsPage() {
     } finally {
       setLoading(false)
     }
-  }, [page, search, catFilter, statusFilter])
+  }, [page, search, catFilter, statusFilter, instaLiveFilter]) // 🔥 NEW: Added hook target dependency monitoring
 
   useEffect(() => { loadProducts() }, [loadProducts])
 
@@ -168,7 +169,7 @@ export default function ProductsPage() {
       name: p.name, department: p.department || '', category: p.category, subcategory: p.subcategory || '',
       brand: p.brand || '', price: String(p.base_price), stock: String(p.stock),
       color: p.color || '', size: p.size || '', barcode: p.barcode || '', is_active: p.is_active,
-      sales_channel: p.sales_channel || 'MAIN_STORE', // 🔥 NEW: Load sales channel for editing
+      sales_channel: p.sales_channel || 'MAIN_STORE', 
       images: p.images || []
     })
     setEditItem(p); setAddOpen(true)
@@ -189,12 +190,12 @@ export default function ProductsPage() {
     }
   }
 
-async function handleExcelFile(file: File) {
+  async function handleExcelFile(file: File) {
     try {
       const res = await uploadExcel(file)
       const mappedResult = {
-        created: res.summary?.parents_processed || 0, // Base products processed
-        updated: res.summary?.variants_processed || 0, // Sizes/Colors processed
+        created: res.summary?.parents_processed || 0, 
+        updated: res.summary?.variants_processed || 0, 
         failed: res.summary?.failed || 0,
         parseErrors: res.summary?.parse_errors || 0
       }
@@ -343,11 +344,17 @@ async function handleExcelFile(file: File) {
           {categories.map(c => <option key={c}>{c}</option>)}
         </select>
 
-        <select className="flt-select" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
+        <select className="flt-select" value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setPage(1) }}>
           <option value="">All Status</option>
           <option value="active">Active</option>
           <option value="inactive">Inactive</option>
         </select>
+
+        {/* 🔥 NEW: PREMIUM INSTA LIVE EXCLUSIVE TOGGLE COMPONENT */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: '#FCE7F3', padding: '4px 14px', borderRadius: 20, border: '1px solid #FBCFE8', height: 38 }}>
+          <span style={{ fontSize: 11, fontWeight: 700, color: '#BE185D', letterSpacing: '0.04em', textTransform: 'uppercase' }}>Insta Live Exclusives</span>
+          <Toggle checked={instaLiveFilter} onChange={v => { setInstaLiveFilter(v); setPage(1); }} />
+        </div>
 
         <div className="ms-auto" style={{ display:'flex', gap:8 }}>
           <button className="btn btn-primary" onClick={() => { setForm(emptyForm); setEditItem(null); setFormErrors({}); setAddOpen(true) }}>
@@ -427,7 +434,6 @@ async function handleExcelFile(file: File) {
 
                     <td style={{ padding: '12px 14px', verticalAlign: 'middle', fontWeight: 600, maxWidth: 200, lineHeight: 1.35 }}>
                       {p.name}
-                      {/* 🔥 NEW: Show badge in table if it's an Insta Live product */}
                       {p.sales_channel === 'INSTA_LIVE' && (
                         <span style={{ display: 'inline-block', marginLeft: 8, fontSize: 9, background: '#FCE7F3', color: '#BE185D', padding: '2px 6px', borderRadius: 4, verticalAlign: 'middle' }}>
                           INSTA LIVE
@@ -559,7 +565,6 @@ async function handleExcelFile(file: File) {
             )}
           </div>
           
-          {/* 🔥 NEW: Insta Live Exclusive Toggle */}
           <div className="fgroup full" style={{ flexDirection:'row', alignItems:'center', gap:12, background: 'var(--cream-1)', padding: 12, borderRadius: 8 }}>
             <div style={{ flex: 1 }}>
               <label className="flabel" style={{ margin:0, color: '#BE185D' }}>Insta Live Exclusive</label>
@@ -672,7 +677,7 @@ async function handleExcelFile(file: File) {
         )}
       </Modal>
 
-      {/* Full-Screen Image Preview (Lightbox) */}
+      {/* Lightbox Lightbox Preview */}
       {previewImage && (
         <div 
           style={{ 
