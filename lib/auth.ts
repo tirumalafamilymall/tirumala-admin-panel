@@ -31,8 +31,10 @@ export async function loginAdmin(email: string, password: string): Promise<strin
     throw new Error('ACCESS_DENIED')
   }
 
-  // 🔥 Force refresh the token AFTER verify-admin sets the claim
-  // Without this, the stored token has no role claim and proxy.ts blocks you
+  // 🔥 The Claude Fix: Wait 1 second for Firebase servers to sync the new custom claim
+  await new Promise(resolve => setTimeout(resolve, 1000))
+
+  // Force refresh the token AFTER the delay so proxy.ts sees the ADMIN role
   const freshToken = await cred.user.getIdToken(true)
   
   localStorage.setItem('adminToken', freshToken)
