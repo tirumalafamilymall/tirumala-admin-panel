@@ -189,11 +189,18 @@ export default function ProductsPage() {
     }
   }
 
-  async function handleExcelFile(file: File) {
+async function handleExcelFile(file: File) {
     try {
-      const result = await uploadExcel(file) as ExcelResult
-      setExcelResult(result)
-      toast(`Created ${result.created ?? 0}, Updated ${result.updated ?? 0}`, 'success')
+      const res = await uploadExcel(file)
+      const mappedResult = {
+        created: res.summary?.parents_processed || 0, // Base products processed
+        updated: res.summary?.variants_processed || 0, // Sizes/Colors processed
+        failed: res.summary?.failed || 0,
+        parseErrors: res.summary?.parse_errors || 0
+      }
+      
+      setExcelResult(mappedResult)
+      toast(`Processed ${mappedResult.created} products & ${mappedResult.updated} variants`, 'success')
       loadProducts()
     } catch (e: any) { toast(e?.message || 'Upload failed', 'error') }
   }

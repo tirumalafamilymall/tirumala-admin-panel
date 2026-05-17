@@ -1,12 +1,14 @@
 'use client'
 import { useState, useEffect } from 'react'
-import Link from 'next/link' // 🔥 Added Next.js Link
-// 🔥 Changed searchProducts to searchProductsForLink
+import Link from 'next/link' 
 import { getInstaLivePosts, createInstaPost, updateInstaPost, deleteInstaPost, linkProduct, unlinkProduct, searchProductsForLink } from '@/lib/api'
-import { Modal, Confirm, Toggle, toast } from '@/components/admin/ui'
-import { Camera, Link as LinkIcon, Trash2, Search, Package, ExternalLink, Loader2 } from 'lucide-react'
+import { getAdminToken } from '@/lib/auth' // 🔥 Need this for secure upload
+import { API_BASE } from '@/lib/api'
+import { Modal, Confirm, Toggle, UploadZone, toast } from '@/components/admin/ui' // 🔥 Added UploadZone
+import { Camera, Link as LinkIcon, Trash2, Search, Package, Loader2 } from 'lucide-react'
 
-const emptyForm = { title: '', instagramUrl: '', is_active: true }
+// 🔥 Added thumbnail to the form state
+const emptyForm = { title: '', instagramUrl: '', thumbnail: '', is_active: true }
 
 export default function InstaLivePage() {
   const [posts, setPosts] = useState<any[]>([])
@@ -36,14 +38,40 @@ export default function InstaLivePage() {
   const [prodSearch, setProdSearch] = useState('')
   const [searchResults, setSearchResults] = useState<any[]>([])
   const [saving, setSaving] = useState(false)
+  const [uploadingMedia, setUploadingMedia] = useState(false) // 🔥 State for upload
 
   function fset(k: string, v: any) { setForm(f => ({ ...f, [k]: v })) }
 
   function validate() {
     const errs: Record<string, string> = {}
     if (!form.instagramUrl.trim()) errs.instagramUrl = 'Instagram URL is required'
+    if (!form.thumbnail.trim()) errs.thumbnail = 'A preview video or image is required'
     setErrors(errs)
     return Object.keys(errs).length === 0
+  }
+
+  // 🔥 NEW: Handle direct video/image upload to DigitalOcean
+  async function handleMediaUpload(file: File) {
+    setUploadingMedia(true)
+    try {
+      const token = getAdminToken()
+      const headers = { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) }
+      
+      const initRes = await fetch(`${API_BASE}/api/upload/presign?filename=${encodeURIComponent(file.name)}&type=${encodeURIComponent(file.type)}`, { headers })
+      const { uploadUrl, publicUrl } = await initRes.json()
+      
+      if (!uploadUrl) throw new Error('Failed to get upload URL')
+      
+      const uploadRes = await fetch(uploadUrl, { method: 'PUT', body: file, headers: { 'Content-Type': file.type,'x-amz-acl': 'public-read' } })
+      if (!uploadRes.ok) throw new Error('Failed to upload file to cloud')
+      
+      fset('thumbnail', publicUrl)
+      toast('Media uploaded successfully', 'success')
+    } catch (e: any) {
+      toast(e.message || 'Media upload failed', 'error')
+    } finally {
+      setUploadingMedia(false)
+    }
   }
 
   async function handleSave() {
@@ -54,7 +82,7 @@ export default function InstaLivePage() {
         title: form.title || undefined,
         instagram_url: form.instagramUrl,
         is_active: form.is_active,
-        thumbnail: '📸' 
+        thumbnail: form.thumbnail // 🔥 Uses uploaded file
       }
 
       if (editItem) {
@@ -84,7 +112,6 @@ export default function InstaLivePage() {
     setProdSearch(q)
     if (!q.trim()) { setSearchResults([]); return }
     try { 
-      // 🔥 FIX: Now uses the Admin search so it can find hidden INSTA_LIVE products!
       const res = await searchProductsForLink(q)
       setSearchResults(res.products || []) 
     } catch { setSearchResults([]) }
@@ -115,7 +142,6 @@ export default function InstaLivePage() {
           <Camera size={16} /> <strong>{posts?.length || 0}</strong> Live Sessions
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
-          {/* 🔥 NEW: Quick link to go upload products */}
           <Link href="/products" className="btn" style={{ background: 'var(--cream-2)', border: '1px solid var(--border)' }}>
             📦 Upload Products
           </Link>
@@ -135,7 +161,14 @@ export default function InstaLivePage() {
                 background: p.is_active ? 'linear-gradient(135deg, #7A1C1C, #C4922A)' : 'var(--cream-2)'
               }}>
                 {p.is_active && <div className="insta-live-badge">● LIVE</div>}
-                <span style={{ fontSize: 48 }}>{p.thumbnail || '📸'}</span>
+                
+                {/* 🔥 Shows Video or Image in Admin Grid */}
+                {p.thumbnail?.includes('.mp4') ? (
+                  <video src={p.thumbnail} autoPlay loop muted style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.8 }} />
+                ) : (
+                  <img src={p.thumbnail} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.8 }} />
+                )}
+
               </div>
               <div className="insta-body">
                 <div className="insta-title">{p.title || 'Untitled Session'}</div>
@@ -144,7 +177,7 @@ export default function InstaLivePage() {
                 </div>
                 <div className="insta-actions">
                   <button className="btn btn-xs" onClick={() => {
-                    setForm({ title: p.title || '', instagramUrl: p.instagram_url, is_active: p.is_active })
+                    setForm({ title: p.title || '', instagramUrl: p.instagram_url, thumbnail: p.thumbnail || '', is_active: p.is_active })
                     setEditItem(p); setErrors({}); setAddOpen(true)
                   }}>Edit</button>
                   <button className="btn btn-xs" onClick={() => { setLinkPostId(p.id); setProdSearch(''); setSearchResults([]) }}>
@@ -166,12 +199,35 @@ export default function InstaLivePage() {
       <Modal open={addOpen} onClose={() => { setAddOpen(false); setEditItem(null) }}
         title={editItem ? 'Update Session' : 'New Instagram Live'}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14, padding: '10px 0' }}>
+          
+          {/* 🔥 NEW: Video Upload Zone */}
+          <div className="fgroup full">
+            <label className="flabel">10-Second Video Preview (or Image) *</label>
+            {form.thumbnail ? (
+              <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                <div style={{ width: 80, height: 100, borderRadius: 6, overflow: 'hidden', border: '1px solid var(--border)' }}>
+                  {form.thumbnail.includes('.mp4') ? (
+                    <video src={form.thumbnail} autoPlay loop muted style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : (
+                    <img src={form.thumbnail} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  )}
+                </div>
+                <button className="btn btn-sm" onClick={() => fset('thumbnail', '')} style={{ color: 'var(--red-1)' }}>Remove</button>
+              </div>
+            ) : uploadingMedia ? (
+              <div style={{ padding: '15px', textAlign: 'center', background: 'var(--cream-2)', borderRadius: 6, fontSize: 13, color: 'var(--ink-4)' }}>⏳ Uploading to Cloud...</div>
+            ) : (
+              <UploadZone label="Upload 10s Clip" subLabel=".mp4, .jpg, .png (Keep under 5MB for speed)" onFile={handleMediaUpload} />
+            )}
+            {errors.thumbnail && <div className="ferror">{errors.thumbnail}</div>}
+          </div>
+
           <div className="fgroup">
             <label className="flabel">Session Title</label>
             <input className="finput" placeholder="e.g. Silk Saree Special" value={form.title} onChange={e => fset('title', e.target.value)} />
           </div>
           <div className="fgroup">
-            <label className="flabel">Instagram URL</label>
+            <label className="flabel">Instagram URL *</label>
             <input className="finput" type="url" placeholder="https://www.instagram.com/reel/..." value={form.instagramUrl} onChange={e => fset('instagramUrl', e.target.value)} />
             {errors.instagramUrl && <div className="ferror">{errors.instagramUrl}</div>}
           </div>
@@ -179,12 +235,13 @@ export default function InstaLivePage() {
             <label className="flabel" style={{ margin: 0 }}>Active on Store</label>
             <Toggle checked={form.is_active} onChange={v => fset('is_active', v)} />
           </div>
-          <button className="btn btn-primary" onClick={handleSave} disabled={saving} style={{ marginTop: 10 }}>
+          <button className="btn btn-primary" onClick={handleSave} disabled={saving || uploadingMedia} style={{ marginTop: 10 }}>
             {saving ? 'Processing...' : 'Save Session'}
           </button>
         </div>
       </Modal>
 
+      {/* Product Linking Modal remains unchanged */}
       <Modal open={!!linkPostId} onClose={() => setLinkPostId(null)} title="Link Products to Session" wide>
         <div className="fgroup" style={{ marginBottom: 16 }}>
           <div className="filter-search">
@@ -200,7 +257,6 @@ export default function InstaLivePage() {
                 <div style={{ display: 'flex', flexDirection: 'column' }}>
                   <span style={{ fontWeight: 600, fontSize: 13 }}>
                     {r.name} 
-                    {/* 🔥 Shows a badge in search so you know it's an exclusive */}
                     {r.sales_channel === 'INSTA_LIVE' && <span style={{ marginLeft: 6, fontSize: 9, color: '#BE185D', background: '#FCE7F3', padding: '2px 4px', borderRadius: 4 }}>EXCLUSIVE</span>}
                   </span>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 2 }}>
