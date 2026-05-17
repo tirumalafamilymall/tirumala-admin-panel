@@ -15,12 +15,11 @@ const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig)
 const auth = getAuth(app)
 
 // 2. Admin Login Function
-export async function loginAdmin(email: string, password: string): Promise<User> {
-  // Sign in via Firebase
+export async function loginAdmin(email: string, password: string): Promise<string> {
   const cred = await signInWithEmailAndPassword(auth, email, password)
-  let token = await cred.user.getIdToken()
+  const token = await cred.user.getIdToken()
 
-  // Verify on your Node.js Backend
+  // Verify on backend — this sets the custom claim in the database/Firebase
   const res = await fetch(`${API_BASE}/api/auth/verify-admin`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -32,12 +31,12 @@ export async function loginAdmin(email: string, password: string): Promise<User>
     throw new Error('ACCESS_DENIED')
   }
 
-  // 🔥 FIX: Force refresh the token NOW to pull the new 'ADMIN' custom claim from Firebase
-  token = await cred.user.getIdToken(true)
-
-  // Save the fresh claim-backed token for subsequent proxy API calls
-  localStorage.setItem('adminToken', token)
-  return cred.user
+  // 🔥 Force refresh the token AFTER verify-admin sets the claim
+  // Without this, the stored token has no role claim and proxy.ts blocks you
+  const freshToken = await cred.user.getIdToken(true)
+  
+  localStorage.setItem('adminToken', freshToken)
+  return freshToken
 }
 
 // 3. Admin Logout Function
