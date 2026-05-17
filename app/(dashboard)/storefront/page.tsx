@@ -14,6 +14,14 @@ const DEFAULT_CONFIG = {
   newSeason: Array(5).fill({ title: '', desc: '', href: '', img: '' })
 }
 
+const SECTION_META = [
+  { num: '01', label: 'Hero Slider', sub: 'Full-width panoramic banner', icon: ImageIcon, tip: 'Recommended: 1400×600px · 21:9 ratio' },
+  { num: '02', label: 'Shop By Category', sub: '6-slot navigation grid', icon: LayoutTemplate, tip: '6 fixed category cards' },
+  { num: '03', label: 'Discover Style', sub: 'Department cover images', icon: ImageIcon, tip: 'Women · Men · Kids' },
+  { num: '04', label: 'Flash Sale Strip', sub: 'Campaign horizon banner', icon: ImageIcon, tip: 'Recommended: 1400×260px' },
+  { num: '05', label: 'New Season Picks', sub: '5-slot showcase grid', icon: LayoutTemplate, tip: 'Slot 01 renders as hero tile' },
+]
+
 export default function StorefrontEditor() {
   const [config, setConfig] = useState<typeof DEFAULT_CONFIG>(DEFAULT_CONFIG)
   const [loading, setLoading] = useState(true)
@@ -34,7 +42,7 @@ export default function StorefrontEditor() {
             newSeason: data.content.newSeason?.length === 5 ? data.content.newSeason : DEFAULT_CONFIG.newSeason,
           })
         }
-      } catch (err) {
+      } catch {
         toast('Failed to load storefront configuration', 'error')
       } finally {
         setLoading(false)
@@ -48,15 +56,11 @@ export default function StorefrontEditor() {
     try {
       const token = getAdminToken()
       const headers = { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) }
-      
       const initRes = await fetch(`${API_BASE}/api/upload/presign?filename=${encodeURIComponent(file.name)}&type=${encodeURIComponent(file.type)}`, { headers })
       const { uploadUrl, publicUrl } = await initRes.json()
-      
       if (!uploadUrl) throw new Error('Failed to get upload URL')
-      
       const uploadRes = await fetch(uploadUrl, { method: 'PUT', body: file, headers: { 'Content-Type': file.type, 'x-amz-acl': 'public-read' } })
       if (!uploadRes.ok) throw new Error('Failed to upload file to cloud')
-      
       updateStateCallback(publicUrl)
       toast('Image uploaded successfully', 'success')
     } catch (e: any) {
@@ -102,268 +106,417 @@ export default function StorefrontEditor() {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3">
-        <Loader2 className="animate-spin text-red-600" size={36} />
-        <p className="text-xs font-semibold tracking-widest text-gray-400 uppercase">Loading Live Configurations...</p>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', gap: 16 }}>
+        <div style={{ width: 48, height: 48, border: '2px solid #f0e8e8', borderTop: '2px solid #9B1C1C', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+        <p style={{ fontSize: 10, letterSpacing: '0.3em', textTransform: 'uppercase', color: '#9CA3AF', fontWeight: 600 }}>Loading configuration</p>
+        <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
       </div>
     )
   }
 
+  const sectionStyle: React.CSSProperties = {
+    background: '#fff',
+    borderRadius: 20,
+    border: '1px solid #F3F0EE',
+    overflow: 'hidden',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.03)',
+  }
+
+  const sectionHeaderStyle: React.CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 16,
+    padding: '20px 28px',
+    borderBottom: '1px solid #F8F5F3',
+    background: '#FDFCFB',
+  }
+
+  const sectionBodyStyle: React.CSSProperties = {
+    padding: '28px',
+  }
+
+  const inputStyle: React.CSSProperties = {
+    width: '100%',
+    fontSize: 12,
+    padding: '10px 14px',
+    border: '1px solid #EDE9E6',
+    borderRadius: 10,
+    outline: 'none',
+    background: '#FDFCFB',
+    color: '#1a1a1a',
+    fontFamily: 'inherit',
+    transition: 'border-color 0.15s',
+    boxSizing: 'border-box',
+  }
+
+  const uploadZoneStyle: React.CSSProperties = {
+    border: '1.5px dashed #DDD8D4',
+    borderRadius: 12,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'column',
+    gap: 6,
+    background: '#FDFCFB',
+    cursor: 'pointer',
+    position: 'relative',
+    transition: 'all 0.2s',
+  }
+
   return (
-    <div className="max-w-6xl mx-auto pb-24 px-4">
-      
-      {/* ── STICKY GLASSMORPHIC TOP CONTROL HEADER ── */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-12 bg-white/80 backdrop-blur-md p-6 rounded-3xl border border-gray-100 shadow-[0_10px_30px_rgba(0,0,0,0.02)] sticky top-4 z-50">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 bg-gradient-to-tr from-red-600 to-red-500 text-white rounded-2xl flex items-center justify-center shadow-md shadow-red-600/10">
-            <LayoutTemplate size={22} />
+    <>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap');
+        
+        .sf-editor * { box-sizing: border-box; }
+        
+        .sf-input:focus { border-color: #9B1C1C !important; box-shadow: 0 0 0 3px rgba(155,28,28,0.06); }
+        
+        .upload-zone:hover { border-color: #9B1C1C !important; background: #FDF8F8 !important; }
+        
+        .img-card:hover .img-overlay { opacity: 1 !important; }
+        
+        .slot-card { transition: box-shadow 0.2s, transform 0.2s; }
+        .slot-card:hover { box-shadow: 0 4px 20px rgba(0,0,0,0.08); transform: translateY(-1px); }
+        
+        .pub-btn:hover:not(:disabled) { background: #7F1D1D !important; box-shadow: 0 8px 24px rgba(155,28,28,0.25) !important; transform: translateY(-1px); }
+        .pub-btn:active:not(:disabled) { transform: translateY(0); }
+        .pub-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        
+        .remove-btn:hover { background: #7F1D1D !important; }
+
+        @keyframes spin { to { transform: rotate(360deg) } }
+        .spin { animation: spin 0.8s linear infinite; }
+
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(12px) } to { opacity: 1; transform: translateY(0) } }
+        .fade-up { animation: fadeUp 0.4s ease forwards; }
+      `}</style>
+
+      <div className="sf-editor" style={{ maxWidth: 1100, margin: '0 auto', paddingBottom: 80, fontFamily: "'DM Sans', sans-serif" }}>
+
+        {/* ── STICKY HEADER ── */}
+        <div style={{
+          position: 'sticky', top: 12, zIndex: 50, marginBottom: 40,
+          background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(16px)',
+          border: '1px solid #EDE9E6',
+          borderRadius: 18,
+          padding: '16px 24px',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16,
+          boxShadow: '0 4px 24px rgba(0,0,0,0.06)',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+            <div style={{
+              width: 44, height: 44, borderRadius: 12,
+              background: 'linear-gradient(135deg, #9B1C1C, #C53030)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              boxShadow: '0 4px 12px rgba(155,28,28,0.2)',
+            }}>
+              <LayoutTemplate size={20} color="#fff" />
+            </div>
+            <div>
+              <div style={{ fontFamily: "'DM Serif Display', serif", fontSize: 18, color: '#111', lineHeight: 1.2 }}>
+                Storefront Editor
+              </div>
+              <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 1, letterSpacing: '0.02em' }}>
+                Visual content management · Live on publish
+              </div>
+            </div>
           </div>
-          <div>
-            <h1 className="text-xl font-bold text-gray-900 tracking-tight">Storefront Editor</h1>
-            <p className="text-xs text-gray-500 mt-0.5">Control global landing visual nodes and dynamic navigation routing links.</p>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            {/* Section index pills */}
+            <div style={{ display: 'flex', gap: 4, marginRight: 8 }}>
+              {SECTION_META.map(s => (
+                <div key={s.num} style={{
+                  fontSize: 9, fontWeight: 700, letterSpacing: '0.08em',
+                  padding: '3px 7px', borderRadius: 6,
+                  background: '#F8F5F3', color: '#9CA3AF',
+                  border: '1px solid #EDE9E6',
+                }}>
+                  {s.num}
+                </div>
+              ))}
+            </div>
+
+            <button
+              className="pub-btn"
+              onClick={handleSave}
+              disabled={saving}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 8,
+                padding: '10px 22px',
+                background: '#9B1C1C',
+                color: '#fff',
+                border: 'none',
+                borderRadius: 12,
+                fontSize: 11,
+                fontWeight: 700,
+                letterSpacing: '0.1em',
+                textTransform: 'uppercase',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                boxShadow: '0 4px 14px rgba(155,28,28,0.2)',
+                fontFamily: 'inherit',
+              }}
+            >
+              {saving
+                ? <><div style={{ width: 13, height: 13, border: '2px solid rgba(255,255,255,0.3)', borderTop: '2px solid #fff', borderRadius: '50%' }} className="spin" /> Publishing…</>
+                : <><Save size={13} /> Publish Changes</>
+              }
+            </button>
           </div>
         </div>
-        <button 
-          onClick={handleSave} 
-          disabled={saving} 
-          className="w-full sm:w-auto px-6 py-3.5 bg-gray-900 hover:bg-red-600 text-white disabled:bg-gray-400 rounded-xl text-xs font-bold tracking-widest uppercase flex items-center justify-center gap-2 transition-all duration-300 shadow-lg hover:shadow-red-600/10 active:scale-98"
-        >
-          {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-          {saving ? 'Publishing Context...' : 'Publish Changes'}
-        </button>
-      </div>
 
-      <div className="space-y-14">
-        
-        {/* ── SECTION 1: HERO SLIDER BANNER ── */}
-        <section className="bg-white rounded-3xl border border-gray-100 shadow-[0_10px_40px_rgba(0,0,0,0.02)] p-6 lg:p-8">
-          <div className="flex items-center gap-2.5 mb-6 pb-4 border-b border-gray-50">
-            <ImageIcon size={18} className="text-red-500" />
-            <h2 className="text-sm font-bold uppercase tracking-wider text-gray-800">1. Top Hero Slider Canvas</h2>
-          </div>
-          
-          <div className="w-full">
-            {config.heroSlider[0]?.img ? (
-              <div className="relative group rounded-2xl overflow-hidden border border-gray-100 shadow-inner bg-gray-900 aspect-[21/9] sm:max-h-[300px]">
-                <img src={config.heroSlider[0].img} alt="Hero Banner" className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-700" />
-                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all duration-300 backdrop-blur-xs">
-                  <button 
-                    onClick={() => setConfig({...config, heroSlider: [{ img: '', href: '#' }]})} 
-                    className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold tracking-wider uppercase flex items-center gap-1.5 shadow-lg transition-transform duration-200 active:scale-95"
-                  >
-                    <Trash2 size={13} /> Remove Artwork
-                  </button>
-                </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
+
+          {/* ── SECTION 1: HERO SLIDER ── */}
+          <div style={sectionStyle} className="fade-up slot-card">
+            <div style={sectionHeaderStyle}>
+              <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.15em', color: '#C53030', minWidth: 24 }}>01</div>
+              <div style={{ width: 1, height: 28, background: '#EDE9E6' }} />
+              <ImageIcon size={15} color="#9CA3AF" />
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: '#1a1a1a', letterSpacing: '0.01em' }}>Hero Slider Canvas</div>
+                <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 1 }}>Full-width panoramic banner · Recommended 1400×600px</div>
               </div>
-            ) : (
-              <div className="border-2 border-dashed border-gray-200 rounded-2xl p-12 text-center bg-gray-50/50 hover:bg-gray-50/80 hover:border-red-300 transition-all duration-300 relative aspect-[21/9] sm:max-h-[240px] flex items-center justify-center">
-                <input type="file" accept="image/*" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" onChange={(e) => {
-                  if (e.target.files?.[0]) handleUpload(e.target.files[0], (url) => setConfig({...config, heroSlider: [{ img: url, href: '#' }]}), 'hero')
-                }} />
-                <div className="flex flex-col items-center gap-2">
-                  <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-xs border text-gray-400">
-                    {uploading === 'hero' ? <Loader2 size={18} className="animate-spin text-red-500" /> : <UploadCloud size={18} />}
+            </div>
+            <div style={sectionBodyStyle}>
+              {config.heroSlider[0]?.img ? (
+                <div className="img-card" style={{ position: 'relative', borderRadius: 12, overflow: 'hidden', aspectRatio: '21/9', maxHeight: 280, background: '#111' }}>
+                  <img src={config.heroSlider[0].img} alt="Hero" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                  <div className="img-overlay" style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.45)', opacity: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'opacity 0.25s' }}>
+                    <button
+                      className="remove-btn"
+                      onClick={() => setConfig({ ...config, heroSlider: [{ img: '', href: '#' }] })}
+                      style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 18px', background: '#9B1C1C', color: '#fff', border: 'none', borderRadius: 10, fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', cursor: 'pointer', fontFamily: 'inherit', transition: 'background 0.15s' }}
+                    >
+                      <Trash2 size={12} /> Remove
+                    </button>
                   </div>
-                  <span className="text-xs font-semibold text-gray-600 mt-1">
-                    {uploading === 'hero' ? 'Uploading to DO Cloud Spaces...' : 'Click or Drag Panoramic Landscape Banner'}
+                </div>
+              ) : (
+                <div
+                  className="upload-zone"
+                  style={{ ...uploadZoneStyle, aspectRatio: '21/9', maxHeight: 220 }}
+                >
+                  <input type="file" accept="image/*" style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer', zIndex: 2 }}
+                    onChange={(e) => { if (e.target.files?.[0]) handleUpload(e.target.files[0], (url) => setConfig({ ...config, heroSlider: [{ img: url, href: '#' }] }), 'hero') }} />
+                  {uploading === 'hero'
+                    ? <div style={{ width: 20, height: 20, border: '2px solid #EDE9E6', borderTop: '2px solid #9B1C1C', borderRadius: '50%' }} className="spin" />
+                    : <UploadCloud size={22} color="#C4B8B2" />
+                  }
+                  <span style={{ fontSize: 12, fontWeight: 600, color: '#6B7280', marginTop: 4 }}>
+                    {uploading === 'hero' ? 'Uploading…' : 'Drop panoramic banner here'}
                   </span>
-                  <span className="text-[10px] text-gray-400 tracking-wider">Recommended Aspect: 21:9 (1400x600px)</span>
+                  <span style={{ fontSize: 10, color: '#B0A8A4', letterSpacing: '0.04em' }}>21:9 · 1400×600px recommended</span>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
-        </section>
 
-        {/* ── SECTION 2: SHOP BY CATEGORY (6 CARDS) ── */}
-        <section className="bg-white rounded-3xl border border-gray-100 shadow-[0_10px_40px_rgba(0,0,0,0.02)] p-6 lg:p-8">
-          <div className="flex items-center gap-2.5 mb-6 pb-4 border-b border-gray-50">
-            <LayoutTemplate size={18} className="text-red-500" />
-            <h2 className="text-sm font-bold uppercase tracking-wider text-gray-800">2. Shop By Category Layout Grid (6 Fixed Slots)</h2>
-          </div>
-          
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {config.shopByCategory.map((cat, i) => (
-              <div key={i} className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden hover:border-gray-200 transition-all group">
-                <div className="p-4 bg-gray-50/50 border-b border-gray-100 flex items-center justify-between">
-                  <span className="text-[10px] font-extrabold tracking-widest text-gray-400 uppercase">Category Slot 0{i + 1}</span>
-                  <div className="w-2 h-2 rounded-full bg-gray-300 group-hover:bg-red-500 transition-colors" />
-                </div>
-                
-                <div className="p-5 space-y-4">
-                  <div>
+          {/* ── SECTION 2: SHOP BY CATEGORY ── */}
+          <div style={sectionStyle} className="fade-up slot-card">
+            <div style={sectionHeaderStyle}>
+              <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.15em', color: '#C53030' }}>02</div>
+              <div style={{ width: 1, height: 28, background: '#EDE9E6' }} />
+              <LayoutTemplate size={15} color="#9CA3AF" />
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: '#1a1a1a' }}>Shop By Category</div>
+                <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 1 }}>6 fixed navigation slots</div>
+              </div>
+              <div style={{ fontSize: 10, color: '#9CA3AF', background: '#F8F5F3', border: '1px solid #EDE9E6', padding: '3px 10px', borderRadius: 6, letterSpacing: '0.06em', fontWeight: 600 }}>
+                6 SLOTS
+              </div>
+            </div>
+            <div style={{ ...sectionBodyStyle, display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+              {config.shopByCategory.map((cat, i) => (
+                <div key={i} className="slot-card" style={{ border: '1px solid #F0EBE8', borderRadius: 14, overflow: 'hidden', background: '#FDFCFB' }}>
+                  <div style={{ padding: '10px 14px', background: '#F8F5F3', borderBottom: '1px solid #EDE9E6', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.18em', color: '#B0A8A4', textTransform: 'uppercase' }}>Slot {String(i + 1).padStart(2, '0')}</span>
+                    <div style={{ width: 6, height: 6, borderRadius: '50%', background: cat.img && cat.name ? '#10B981' : '#DDD8D4' }} />
+                  </div>
+                  <div style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
                     {cat.img ? (
-                      <div className="relative group h-32 rounded-xl overflow-hidden border border-gray-100">
-                        <img src={cat.img} className="w-full h-full object-cover" />
-                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all">
-                          <button onClick={() => updateCategory(i, 'img', '')} className="p-2 bg-white text-gray-900 rounded-lg text-[10px] font-bold tracking-wider uppercase shadow-md flex items-center gap-1 transition active:scale-95">
-                            <Trash2 size={12} className="text-red-500" /> Clear
+                      <div className="img-card" style={{ position: 'relative', height: 100, borderRadius: 10, overflow: 'hidden', background: '#F0EBE8' }}>
+                        <img src={cat.img} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
+                        <div className="img-overlay" style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)', opacity: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'opacity 0.2s' }}>
+                          <button onClick={() => updateCategory(i, 'img', '')} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '6px 12px', background: '#fff', color: '#9B1C1C', border: 'none', borderRadius: 8, fontSize: 10, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                            <Trash2 size={11} /> Clear
                           </button>
                         </div>
                       </div>
                     ) : (
-                      <div className="h-32 border border-dashed border-gray-200 rounded-xl flex items-center justify-center bg-gray-50/30 relative hover:bg-gray-50 transition">
-                        <input type="file" accept="image/*" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onChange={(e) => {
-                          if (e.target.files?.[0]) handleUpload(e.target.files[0], (url) => updateCategory(i, 'img', url), `cat_${i}`)
-                        }} />
-                        {uploading === `cat_${i}` ? <Loader2 size={16} className="animate-spin text-red-500" /> : <div className="flex flex-col items-center text-gray-400 text-[11px] font-medium"><UploadCloud size={16} className="mb-1" /> Add Card image</div>}
+                      <div className="upload-zone" style={{ ...uploadZoneStyle, height: 100 }}>
+                        <input type="file" accept="image/*" style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer' }}
+                          onChange={(e) => { if (e.target.files?.[0]) handleUpload(e.target.files[0], (url) => updateCategory(i, 'img', url), `cat_${i}`) }} />
+                        {uploading === `cat_${i}` ? <div style={{ width: 16, height: 16, border: '2px solid #EDE9E6', borderTop: '2px solid #9B1C1C', borderRadius: '50%' }} className="spin" /> : <UploadCloud size={16} color="#C4B8B2" />}
+                        <span style={{ fontSize: 10, color: '#B0A8A4', fontWeight: 500 }}>{uploading === `cat_${i}` ? 'Uploading…' : 'Add image'}</span>
+                      </div>
+                    )}
+                    <input className="sf-input" style={inputStyle} placeholder="Category name" value={cat.name}
+                      onChange={(e) => updateCategory(i, 'name', e.target.value)} />
+                    <div style={{ position: 'relative' }}>
+                      <input className="sf-input" style={{ ...inputStyle, paddingLeft: 30, fontFamily: 'monospace', fontSize: 11 }} placeholder="/collections/…" value={cat.href}
+                        onChange={(e) => updateCategory(i, 'href', e.target.value)} />
+                      <LinkIcon size={12} color="#C4B8B2" style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* ── SECTION 3: DISCOVER STYLE ── */}
+          <div style={sectionStyle} className="fade-up slot-card">
+            <div style={sectionHeaderStyle}>
+              <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.15em', color: '#C53030' }}>03</div>
+              <div style={{ width: 1, height: 28, background: '#EDE9E6' }} />
+              <ImageIcon size={15} color="#9CA3AF" />
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: '#1a1a1a' }}>Discover Your Style</div>
+                <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 1 }}>Department cover images — Women · Men · Kids</div>
+              </div>
+            </div>
+            <div style={{ ...sectionBodyStyle, display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+              {(['women', 'men', 'kids'] as const).map((dept) => (
+                <div key={dept} className="slot-card" style={{ border: '1px solid #F0EBE8', borderRadius: 14, overflow: 'hidden' }}>
+                  <div style={{ padding: '10px 14px', background: '#F8F5F3', borderBottom: '1px solid #EDE9E6', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.18em', color: '#B0A8A4', textTransform: 'uppercase' }}>{dept}'s</span>
+                    <span style={{ fontSize: 9, background: '#EDE9E6', color: '#9CA3AF', padding: '2px 7px', borderRadius: 5, fontWeight: 600, letterSpacing: '0.06em' }}>FIXED</span>
+                  </div>
+                  <div style={{ padding: 14 }}>
+                    {config.discoverStyle[dept] ? (
+                      <div className="img-card" style={{ position: 'relative', height: 160, borderRadius: 10, overflow: 'hidden' }}>
+                        <img src={config.discoverStyle[dept]} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
+                        <div className="img-overlay" style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)', opacity: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'opacity 0.2s' }}>
+                          <button onClick={() => updateDiscoverStyle(dept, '')} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '6px 12px', background: '#fff', color: '#9B1C1C', border: 'none', borderRadius: 8, fontSize: 10, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                            <Trash2 size={11} /> Replace
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="upload-zone" style={{ ...uploadZoneStyle, height: 160 }}>
+                        <input type="file" accept="image/*" style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer' }}
+                          onChange={(e) => { if (e.target.files?.[0]) handleUpload(e.target.files[0], (url) => updateDiscoverStyle(dept, url), `dept_${dept}`) }} />
+                        {uploading === `dept_${dept}` ? <div style={{ width: 18, height: 18, border: '2px solid #EDE9E6', borderTop: '2px solid #9B1C1C', borderRadius: '50%' }} className="spin" /> : <UploadCloud size={20} color="#C4B8B2" />}
+                        <span style={{ fontSize: 11, fontWeight: 600, color: '#9CA3AF', marginTop: 4 }}>
+                          {uploading === `dept_${dept}` ? 'Uploading…' : `Upload ${dept} poster`}
+                        </span>
                       </div>
                     )}
                   </div>
+                </div>
+              ))}
+            </div>
+          </div>
 
-                  <div className="space-y-2.5">
-                    <div className="relative">
-                      <input className="w-full text-xs font-semibold p-3 pl-8 border border-gray-200 rounded-xl focus:border-red-500 focus:ring-1 focus:ring-red-500/20 bg-white outline-none transition" placeholder="Category Name (e.g., Ethnic Wear)" value={cat.name} onChange={(e) => updateCategory(i, 'name', e.target.value)} />
-                      <Sparkles size={13} className="absolute left-3 top-3.5 text-gray-400" />
-                    </div>
-                    <div className="relative">
-                      <input className="w-full text-xs p-3 pl-8 border border-gray-200 rounded-xl focus:border-red-500 focus:ring-1 focus:ring-red-500/20 bg-white outline-none transition text-gray-500 font-mono" placeholder="Routing Node (e.g., /collections/sarees)" value={cat.href} onChange={(e) => updateCategory(i, 'href', e.target.value)} />
-                      <LinkIcon size={13} className="absolute left-3 top-3.5 text-gray-400" />
-                    </div>
+          {/* ── SECTION 4: FLASH SALE ── */}
+          <div style={sectionStyle} className="fade-up slot-card">
+            <div style={sectionHeaderStyle}>
+              <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.15em', color: '#C53030' }}>04</div>
+              <div style={{ width: 1, height: 28, background: '#EDE9E6' }} />
+              <ImageIcon size={15} color="#9CA3AF" />
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: '#1a1a1a' }}>Flash Sale Strip</div>
+                <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 1 }}>Campaign horizon banner · 1400×260px recommended</div>
+              </div>
+            </div>
+            <div style={sectionBodyStyle}>
+              {config.flashSale?.img ? (
+                <div className="img-card" style={{ position: 'relative', borderRadius: 12, overflow: 'hidden', height: 110 }}>
+                  <img src={config.flashSale.img} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
+                  <div className="img-overlay" style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)', opacity: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'opacity 0.2s' }}>
+                    <button className="remove-btn" onClick={() => setConfig({ ...config, flashSale: { img: '' } })}
+                      style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', background: '#9B1C1C', color: '#fff', border: 'none', borderRadius: 10, fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', transition: 'background 0.15s' }}>
+                      <Trash2 size={12} /> Replace Banner
+                    </button>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* ── SECTION 3: DISCOVER YOUR STYLE ── */}
-        <section className="bg-white rounded-3xl border border-gray-100 shadow-[0_10px_40px_rgba(0,0,0,0.02)] p-6 lg:p-8">
-          <div className="flex items-center gap-2.5 mb-6 pb-4 border-b border-gray-50">
-            <ImageIcon size={18} className="text-red-500" />
-            <h2 className="text-sm font-bold uppercase tracking-wider text-gray-800">3. Discover Your Style Department Covers</h2>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {(['women', 'men', 'kids'] as const).map((dept) => (
-              <div key={dept} className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden group">
-                <div className="p-4 bg-gray-50/50 border-b border-gray-100 flex items-center justify-between">
-                  <span className="text-[10px] font-extrabold tracking-widest text-gray-600 uppercase">{dept}'s department edit</span>
-                  <span className="text-[9px] bg-gray-200 font-mono px-2 py-0.5 rounded-md text-gray-500">Fixed Node</span>
-                </div>
-                
-                <div className="p-5">
-                  {config.discoverStyle[dept] ? (
-                    <div className="relative group h-44 rounded-xl overflow-hidden border border-gray-100">
-                      <img src={config.discoverStyle[dept]} className="w-full h-full object-cover group-hover:scale-105 transition duration-500" />
-                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all">
-                        <button onClick={() => updateDiscoverStyle(dept, '')} className="px-3 py-1.5 bg-white text-gray-900 rounded-xl text-[10px] font-bold tracking-wider uppercase shadow-md flex items-center gap-1 transition active:scale-95">
-                          <Trash2 size={12} className="text-red-500" /> Change Grid Graphics
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="h-44 border-2 border-dashed border-gray-200 rounded-xl flex items-center justify-center bg-gray-50/30 relative hover:bg-gray-50 transition">
-                      <input type="file" accept="image/*" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onChange={(e) => {
-                        if (e.target.files?.[0]) handleUpload(e.target.files[0], (url) => updateDiscoverStyle(dept, url), `dept_${dept}`)
-                      }} />
-                      {uploading === `dept_${dept}` ? (
-                        <Loader2 size={18} className="animate-spin text-red-500" />
-                      ) : (
-                        <div className="flex flex-col items-center text-gray-400 text-xs font-semibold gap-1">
-                          <UploadCloud size={20} />
-                          <span>Upload {dept} poster</span>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* ── SECTION 4: FLASH SALE STRIP ── */}
-        <section className="bg-white rounded-3xl border border-gray-100 shadow-[0_10px_40px_rgba(0,0,0,0.02)] p-6 lg:p-8">
-          <div className="flex items-center gap-2.5 mb-6 pb-4 border-b border-gray-50">
-            <ImageIcon size={18} className="text-red-500" />
-            <h2 className="text-sm font-bold uppercase tracking-wider text-gray-800">4. Campaign Flash Sale Horizon Strip</h2>
-          </div>
-          
-          <div className="w-full">
-            {config.flashSale?.img ? (
-              <div className="relative group rounded-2xl overflow-hidden border border-gray-100 shadow-inner bg-gray-900 h-28">
-                <img src={config.flashSale.img} alt="Flash Sale Ribbon" className="w-full h-full object-cover" />
-                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all">
-                  <button 
-                    onClick={() => setConfig({...config, flashSale: { img: '' }})} 
-                    className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold tracking-wider uppercase flex items-center gap-1.5 shadow-lg transition duration-200"
-                  >
-                    <Trash2 size={13} /> Change Promotion Ribbon
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="border-2 border-dashed border-gray-200 rounded-2xl p-8 text-center bg-gray-50/50 hover:bg-gray-50/80 hover:border-red-300 transition-all duration-300 relative h-28 flex items-center justify-center">
-                <input type="file" accept="image/*" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onChange={(e) => {
-                  if (e.target.files?.[0]) handleUpload(e.target.files[0], (url) => setConfig({...config, flashSale: { img: url }}), 'flash')
-                }} />
-                <div className="flex flex-col items-center gap-1">
-                  {uploading === 'flash' ? <Loader2 size={18} className="animate-spin text-red-500" /> : <UploadCloud size={20} className="text-gray-400" />}
-                  <span className="text-xs font-semibold text-gray-600">
-                    {uploading === 'flash' ? 'Uploading Banner...' : 'Drop Wide Flash Ribbon Graphic'}
+              ) : (
+                <div className="upload-zone" style={{ ...uploadZoneStyle, height: 110 }}>
+                  <input type="file" accept="image/*" style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer' }}
+                    onChange={(e) => { if (e.target.files?.[0]) handleUpload(e.target.files[0], (url) => setConfig({ ...config, flashSale: { img: url } }), 'flash') }} />
+                  {uploading === 'flash' ? <div style={{ width: 18, height: 18, border: '2px solid #EDE9E6', borderTop: '2px solid #9B1C1C', borderRadius: '50%' }} className="spin" /> : <UploadCloud size={20} color="#C4B8B2" />}
+                  <span style={{ fontSize: 12, fontWeight: 600, color: '#6B7280', marginTop: 4 }}>
+                    {uploading === 'flash' ? 'Uploading…' : 'Drop flash sale ribbon graphic'}
                   </span>
-                  <span className="text-[10px] text-gray-400">Optimal dimension parameters: 1400x260px</span>
+                  <span style={{ fontSize: 10, color: '#B0A8A4' }}>1400×260px · Wide format</span>
                 </div>
+              )}
+            </div>
+          </div>
+
+          {/* ── SECTION 5: NEW SEASON PICKS ── */}
+          <div style={sectionStyle} className="fade-up slot-card">
+            <div style={sectionHeaderStyle}>
+              <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.15em', color: '#C53030' }}>05</div>
+              <div style={{ width: 1, height: 28, background: '#EDE9E6' }} />
+              <LayoutTemplate size={15} color="#9CA3AF" />
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: '#1a1a1a' }}>New Season Picks</div>
+                <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 1 }}>5-slot showcase · Slot 01 renders as double-height hero tile</div>
               </div>
-            )}
-          </div>
-        </section>
+              <div style={{ fontSize: 10, color: '#9CA3AF', background: '#F8F5F3', border: '1px solid #EDE9E6', padding: '3px 10px', borderRadius: 6, letterSpacing: '0.06em', fontWeight: 600 }}>
+                5 SLOTS
+              </div>
+            </div>
 
-        {/* ── SECTION 5: NEW SEASON PICKS ── */}
-        <section className="bg-white rounded-3xl border border-gray-100 shadow-[0_10px_40px_rgba(0,0,0,0.02)] p-6 lg:p-8">
-          <div className="flex items-center gap-2.5 mb-2 pb-4 border-b border-gray-50">
-            <LayoutTemplate size={18} className="text-red-500" />
-            <h2 className="text-sm font-bold uppercase tracking-wider text-gray-800">5. New Season Picks Showcase (5 Slots)</h2>
-          </div>
-          <div className="p-3.5 bg-amber-50/60 rounded-xl border border-amber-100 text-[11px] font-medium text-amber-800 leading-relaxed mb-6 flex items-start gap-2">
-            <Eye size={14} className="mt-0.5 shrink-0 text-amber-600" />
-            <span><strong>Structural layout behavior:</strong> Slot 1 compiles instantly into a high-visibility, double-height feature frame on the desktop storefront grid. Make sure to use your absolute highest-quality premium product edit for Slot 1!</span>
-          </div>
+            {/* Info strip */}
+            <div style={{ margin: '0 28px', marginTop: 20, padding: '10px 14px', background: '#FFFBF0', border: '1px solid #FDE68A', borderRadius: 10, display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+              <Eye size={13} color="#D97706" style={{ marginTop: 1, flexShrink: 0 }} />
+              <span style={{ fontSize: 11, color: '#92400E', lineHeight: 1.6 }}>
+                <strong>Slot 01</strong> compiles as a double-height feature frame on desktop. Use your highest-quality editorial image here.
+              </span>
+            </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {config.newSeason.map((item, i) => (
-              <div key={i} className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden hover:border-gray-200 transition group">
-                <div className="p-4 bg-gray-50/50 border-b border-gray-100 flex items-center justify-between">
-                  <span className="text-[10px] font-extrabold tracking-widest text-gray-400 uppercase">Season Card 0{i + 1}</span>
-                  {i === 0 && <span className="text-[9px] bg-red-50 text-red-700 border border-red-100 font-bold px-2 py-0.5 rounded-md tracking-wider uppercase">Hero Tile</span>}
-                </div>
-                
-                <div className="p-5 space-y-4">
-                  <div>
+            <div style={{ ...sectionBodyStyle, paddingTop: 16, display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+              {config.newSeason.map((item, i) => (
+                <div key={i} className="slot-card" style={{ border: '1px solid #F0EBE8', borderRadius: 14, overflow: 'hidden', background: '#FDFCFB' }}>
+                  <div style={{ padding: '10px 14px', background: '#F8F5F3', borderBottom: '1px solid #EDE9E6', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.18em', color: '#B0A8A4', textTransform: 'uppercase' }}>
+                      Season {String(i + 1).padStart(2, '0')}
+                    </span>
+                    {i === 0 && (
+                      <span style={{ fontSize: 9, background: '#FEF2F2', color: '#9B1C1C', border: '1px solid #FECACA', padding: '2px 8px', borderRadius: 5, fontWeight: 700, letterSpacing: '0.06em' }}>
+                        HERO TILE
+                      </span>
+                    )}
+                  </div>
+                  <div style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
                     {item.img ? (
-                      <div className="relative group h-28 rounded-xl overflow-hidden border">
-                        <img src={item.img} className="w-full h-full object-cover" />
-                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition">
-                          <button onClick={() => updateNewSeason(i, 'img', '')} className="p-2 bg-white text-gray-900 rounded-lg text-[10px] font-bold tracking-wider uppercase shadow-md flex items-center gap-1 transition">
-                            <Trash2 size={12} className="text-red-500" /> Clear File
+                      <div className="img-card" style={{ position: 'relative', height: 110, borderRadius: 10, overflow: 'hidden' }}>
+                        <img src={item.img} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
+                        <div className="img-overlay" style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)', opacity: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'opacity 0.2s' }}>
+                          <button onClick={() => updateNewSeason(i, 'img', '')} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '6px 12px', background: '#fff', color: '#9B1C1C', border: 'none', borderRadius: 8, fontSize: 10, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                            <Trash2 size={11} /> Clear
                           </button>
                         </div>
                       </div>
                     ) : (
-                      <div className="h-28 border border-dashed border-gray-200 rounded-xl flex items-center justify-center bg-gray-50/30 relative hover:bg-gray-100 transition">
-                        <input type="file" accept="image/*" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onChange={(e) => {
-                          if (e.target.files?.[0]) handleUpload(e.target.files[0], (url) => updateNewSeason(i, 'img', url), `season_${i}`)
-                        }} />
-                        {uploading === `season_${i}` ? <Loader2 size={16} className="animate-spin text-red-500" /> : <div className="flex flex-col items-center text-gray-400 text-[11px] font-medium"><UploadCloud size={16} className="mb-1" /> Mount Card Artwork</div>}
+                      <div className="upload-zone" style={{ ...uploadZoneStyle, height: 110 }}>
+                        <input type="file" accept="image/*" style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer' }}
+                          onChange={(e) => { if (e.target.files?.[0]) handleUpload(e.target.files[0], (url) => updateNewSeason(i, 'img', url), `season_${i}`) }} />
+                        {uploading === `season_${i}` ? <div style={{ width: 16, height: 16, border: '2px solid #EDE9E6', borderTop: '2px solid #9B1C1C', borderRadius: '50%' }} className="spin" /> : <UploadCloud size={16} color="#C4B8B2" />}
+                        <span style={{ fontSize: 10, color: '#B0A8A4', fontWeight: 500 }}>{uploading === `season_${i}` ? 'Uploading…' : 'Mount artwork'}</span>
                       </div>
                     )}
-                  </div>
-
-                  <div className="space-y-2">
-                    <input className="w-full text-xs font-semibold p-2.5 border border-gray-200 rounded-xl focus:border-red-500 focus:ring-1 focus:ring-red-500/20 bg-white outline-none transition" placeholder="Main Title (e.g., Anarkali Sets)" value={item.title} onChange={(e) => updateNewSeason(i, 'title', e.target.value)} />
-                    <input className="w-full text-xs p-2.5 border border-gray-200 rounded-xl focus:border-red-500 focus:ring-1 focus:ring-red-500/20 bg-white outline-none transition text-gray-500" placeholder="Subtext Description (e.g., Timeless Elegance)" value={item.desc} onChange={(e) => updateNewSeason(i, 'desc', e.target.value)} />
-                    <div className="relative">
-                      <input className="w-full text-xs p-2.5 pl-8 border border-gray-200 rounded-xl focus:border-red-500 focus:ring-1 focus:ring-red-500/20 bg-white outline-none transition font-mono text-gray-500" placeholder="Target Route Link" value={item.href} onChange={(e) => updateNewSeason(i, 'href', e.target.value)} />
-                      <LinkIcon size={12} className="absolute left-2.5 top-3 text-gray-400" />
+                    <input className="sf-input" style={inputStyle} placeholder="Title (e.g. Anarkali Sets)" value={item.title}
+                      onChange={(e) => updateNewSeason(i, 'title', e.target.value)} />
+                    <input className="sf-input" style={{ ...inputStyle, color: '#6B7280' }} placeholder="Subtext (e.g. Timeless Elegance)" value={item.desc}
+                      onChange={(e) => updateNewSeason(i, 'desc', e.target.value)} />
+                    <div style={{ position: 'relative' }}>
+                      <input className="sf-input" style={{ ...inputStyle, paddingLeft: 30, fontFamily: 'monospace', fontSize: 11, color: '#6B7280' }} placeholder="/collections/…" value={item.href}
+                        onChange={(e) => updateNewSeason(i, 'href', e.target.value)} />
+                      <LinkIcon size={12} color="#C4B8B2" style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
                     </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </section>
 
+        </div>
       </div>
-    </div>
+    </>
   )
 }
