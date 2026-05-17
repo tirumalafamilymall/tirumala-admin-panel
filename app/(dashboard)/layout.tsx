@@ -27,14 +27,12 @@ const NAV = [
     href: '/orders',    
     label: 'Orders',    
     chip: null,
-    chipColor: 'amber',
     icon: <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="2" y="1" width="12" height="14" rx="1.5"/><path d="M5 5h6M5 8h6M5 11h4"/></svg> 
   },
   { 
     href: '/shipping',    
     label: 'Shipping',    
-    chip: 'Live',
-    chipColor: 'green',
+    chip: null,
     icon: <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M1 5h10l4 3v5H1V5z"/><circle cx="4" cy="13" r="1.5"/><circle cx="12" cy="13" r="1.5"/><path d="M11 5V3a1 1 0 0 0-1-1H3a1 1 0 0 0-1 1v2"/></svg> 
   },
   { 
@@ -49,12 +47,10 @@ const NAV = [
     chip: null,
     icon: <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="1" y="3" width="14" height="10" rx="1.5"/><circle cx="8" cy="8" r="2"/></svg> 
   },
-  /* --- 🔥 ADDED STOREFRONT EDITOR HERE --- */
   { 
     href: '/storefront',
     label: 'Storefront',
-    chip: 'UI',
-    chipColor: 'purple',
+    chip: null,
     icon: <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="1" y="3" width="14" height="10" rx="1.5"/><path d="M1 7h14M5 7v6"/></svg> 
   },
 ]
@@ -128,15 +124,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <div className="sb-admin-pill">Admin Console</div>
         </div>
 
-        <div className="sb-nav">
-          <div className="sb-section">Main Menu</div>
-          {NAV.map(n => (
-            <Link key={n.href} href={n.href} className={`sb-item ${pathname.startsWith(n.href) ? 'active' : ''}`}>
-              <span className="sb-icon">{n.icon}</span>
-              {n.label}
-              {n.chip && <span className={`sb-chip ${n.chipColor || ''}`}>{n.chip}</span>}
-            </Link>
-          ))}
+<div className="sb-nav">
+  <div className="sb-section">Main Menu</div>
+  {NAV.map(n => (
+    <Link key={n.href} href={n.href} className={`sb-item ${pathname.startsWith(n.href) ? 'active' : ''}`}>
+      <span className="sb-icon">{n.icon}</span>
+      {n.label}
+    </Link>
+  ))}
 
           <div className="sb-section" style={{ marginTop: 8 }}>System</div>
           <Link href="https://www.tirumalafamilymall.com/" target="_blank" className="sb-item">
@@ -180,23 +175,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </div>
           <div className="topbar-right">
             <div className="topbar-date">{date}</div>
-            <div className="topbar-search">
-              <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="6.5" cy="6.5" r="5"/><path d="M11 11l3 3"/>
-              </svg>
-              <input type="text" placeholder="Quick search…" />
-            </div>
-            <div className="topbar-icon-btn" style={{ position: 'relative' }}>
-              <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6">
-                <path d="M8 1a5 5 0 0 1 5 5v2.5l1 2.5H2l1-2.5V6a5 5 0 0 1 5-5zM6.5 13.5a1.5 1.5 0 0 0 3 0"/>
-              </svg>
-              <div className="topbar-notif-dot"></div>
-            </div>
-            <div className="topbar-profile">
-              <div className="topbar-p-avatar">{user?.email?.[0]?.toUpperCase()}</div>
-              <span className="topbar-p-name">{user?.email || 'Admin'}</span>
-            </div>
           </div>
+          
         </header>
 
         {/* Page content */}

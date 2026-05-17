@@ -15,7 +15,7 @@ const DEFAULT_CONFIG = {
 }
 
 const SECTION_META = [
-  { num: '01', label: 'Hero Slider', sub: 'Full-width panoramic banner', icon: ImageIcon, tip: 'Recommended: 1400×600px · 21:9 ratio' },
+  { num: '01', label: 'Hero Slider', sub: 'Multi-image rotating carousel deck', icon: ImageIcon, tip: 'Recommended: 1400×600px · 21:9 ratio' },
   { num: '02', label: 'Shop By Category', sub: '6-slot navigation grid', icon: LayoutTemplate, tip: '6 fixed category cards' },
   { num: '03', label: 'Discover Style', sub: 'Department cover images', icon: ImageIcon, tip: 'Women · Men · Kids' },
   { num: '04', label: 'Flash Sale Strip', sub: 'Campaign horizon banner', icon: ImageIcon, tip: 'Recommended: 1400×260px' },
@@ -37,6 +37,7 @@ export default function StorefrontEditor() {
           setConfig({
             ...DEFAULT_CONFIG,
             ...data.content,
+            heroSlider: data.content.heroSlider?.length > 0 ? data.content.heroSlider : DEFAULT_CONFIG.heroSlider,
             discoverStyle: { ...DEFAULT_CONFIG.discoverStyle, ...data.content.discoverStyle },
             shopByCategory: data.content.shopByCategory?.length === 6 ? data.content.shopByCategory : DEFAULT_CONFIG.shopByCategory,
             newSeason: data.content.newSeason?.length === 5 ? data.content.newSeason : DEFAULT_CONFIG.newSeason,
@@ -224,7 +225,6 @@ export default function StorefrontEditor() {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            {/* Section index pills */}
             <div style={{ display: 'flex', gap: 4, marginRight: 8 }}>
               {SECTION_META.map(s => (
                 <div key={s.num} style={{
@@ -269,48 +269,77 @@ export default function StorefrontEditor() {
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
 
-          {/* ── SECTION 1: HERO SLIDER ── */}
+          {/* ── 🔥 UPGRADED SECTION 1: DYNAMIC HERO SLIDER DECK ── */}
           <div style={sectionStyle} className="fade-up slot-card">
             <div style={sectionHeaderStyle}>
               <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.15em', color: '#C53030', minWidth: 24 }}>01</div>
               <div style={{ width: 1, height: 28, background: '#EDE9E6' }} />
               <ImageIcon size={15} color="#9CA3AF" />
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: '#1a1a1a', letterSpacing: '0.01em' }}>Hero Slider Canvas</div>
-                <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 1 }}>Full-width panoramic banner · Recommended 1400×600px</div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: '#1a1a1a', letterSpacing: '0.01em' }}>Hero Slider Carousel Deck</div>
+                <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 1 }}>Manage multiple rotating storefront banners · Recommended 1400×600px</div>
+              </div>
+              <div style={{ fontSize: 10, color: '#9CA3AF', background: '#F8F5F3', border: '1px solid #EDE9E6', padding: '3px 10px', borderRadius: 6, letterSpacing: '0.06em', fontWeight: 600 }}>
+                {config.heroSlider.filter(s => s.img).length} SLIDES
               </div>
             </div>
-            <div style={sectionBodyStyle}>
-              {config.heroSlider[0]?.img ? (
-                <div className="img-card" style={{ position: 'relative', borderRadius: 12, overflow: 'hidden', aspectRatio: '21/9', maxHeight: 280, background: '#111' }}>
-                  <img src={config.heroSlider[0].img} alt="Hero" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-                  <div className="img-overlay" style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.45)', opacity: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'opacity 0.25s' }}>
-                    <button
-                      className="remove-btn"
-                      onClick={() => setConfig({ ...config, heroSlider: [{ img: '', href: '#' }] })}
-                      style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 18px', background: '#9B1C1C', color: '#fff', border: 'none', borderRadius: 10, fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', cursor: 'pointer', fontFamily: 'inherit', transition: 'background 0.15s' }}
-                    >
-                      <Trash2 size={12} /> Remove
-                    </button>
+            
+            <div style={{ ...sectionBodyStyle, display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+              {config.heroSlider.map((slide, idx) => {
+                if (!slide.img) return null;
+                return (
+                  <div key={idx} className="slot-card" style={{ border: '1px solid #F0EBE8', borderRadius: 14, overflow: 'hidden', background: '#FDFCFB' }}>
+                    <div style={{ padding: '10px 14px', background: '#F8F5F3', borderBottom: '1px solid #EDE9E6', display: 'flex', alignItems: 'center' }}>
+                      <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.18em', color: '#B0A8A4', textTransform: 'uppercase' }}>Slide 0{idx + 1}</span>
+                    </div>
+                    <div style={{ padding: 14 }}>
+                      <div className="img-card" style={{ position: 'relative', height: 110, borderRadius: 10, overflow: 'hidden', background: '#F0EBE8' }}>
+                        <img src={slide.img} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} alt="" />
+                        <div className="img-overlay" style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.45)', opacity: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'opacity 0.25s' }}>
+                          <button
+                            className="remove-btn"
+                            onClick={() => {
+                              const updated = config.heroSlider.filter((_, i) => i !== idx);
+                              setConfig({ ...config, heroSlider: updated.length > 0 ? updated : [{ img: '', href: '#' }] });
+                            }}
+                            style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '6px 12px', background: '#9B1C1C', color: '#fff', border: 'none', borderRadius: 8, fontSize: 10, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}
+                          >
+                            <Trash2 size={11} /> Delete
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+
+              {/* Seamless, consistent upload card slot integration */}
+              <div className="slot-card" style={{ border: '1px solid #F0EBE8', borderRadius: 14, overflow: 'hidden', background: '#FDFCFB' }}>
+                <div style={{ padding: '10px 14px', background: '#F8F5F3', borderBottom: '1px solid #EDE9E6', display: 'flex', alignItems: 'center' }}>
+                  <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.18em', color: '#B0A8A4', textTransform: 'uppercase' }}>Add New Slide</span>
+                </div>
+                <div style={{ padding: 14 }}>
+                  <div className="upload-zone" style={{ ...uploadZoneStyle, height: 110 }}>
+                    <input type="file" accept="image/*" style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer', zIndex: 2 }}
+                      onChange={(e) => {
+                        if (e.target.files?.[0]) {
+                          handleUpload(e.target.files[0], (url) => {
+                            const cleanSlides = config.heroSlider.filter(s => s.img);
+                            setConfig({ ...config, heroSlider: [...cleanSlides, { img: url, href: '#' }] });
+                          }, `hero_new`);
+                        }
+                      }} 
+                    />
+                    {uploading === 'hero_new'
+                      ? <div style={{ width: 16, height: 16, border: '2px solid #EDE9E6', borderTop: '2px solid #9B1C1C', borderRadius: '50%' }} className="spin" />
+                      : <UploadCloud size={18} color="#C4B8B2" />
+                    }
+                    <span style={{ fontSize: 10, color: '#B0A8A4', fontWeight: 500, marginTop: 4 }}>
+                      {uploading === 'hero_new' ? 'Uploading…' : 'Upload Image File'}
+                    </span>
                   </div>
                 </div>
-              ) : (
-                <div
-                  className="upload-zone"
-                  style={{ ...uploadZoneStyle, aspectRatio: '21/9', maxHeight: 220 }}
-                >
-                  <input type="file" accept="image/*" style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer', zIndex: 2 }}
-                    onChange={(e) => { if (e.target.files?.[0]) handleUpload(e.target.files[0], (url) => setConfig({ ...config, heroSlider: [{ img: url, href: '#' }] }), 'hero') }} />
-                  {uploading === 'hero'
-                    ? <div style={{ width: 20, height: 20, border: '2px solid #EDE9E6', borderTop: '2px solid #9B1C1C', borderRadius: '50%' }} className="spin" />
-                    : <UploadCloud size={22} color="#C4B8B2" />
-                  }
-                  <span style={{ fontSize: 12, fontWeight: 600, color: '#6B7280', marginTop: 4 }}>
-                    {uploading === 'hero' ? 'Uploading…' : 'Drop panoramic banner here'}
-                  </span>
-                  <span style={{ fontSize: 10, color: '#B0A8A4', letterSpacing: '0.04em' }}>21:9 · 1400×600px recommended</span>
-                </div>
-              )}
+              </div>
             </div>
           </div>
 
