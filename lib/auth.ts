@@ -18,7 +18,7 @@ const auth = getAuth(app)
 export async function loginAdmin(email: string, password: string): Promise<User> {
   // Sign in via Firebase
   const cred = await signInWithEmailAndPassword(auth, email, password)
-  const token = await cred.user.getIdToken()
+  let token = await cred.user.getIdToken()
 
   // Verify on your Node.js Backend
   const res = await fetch(`${API_BASE}/api/auth/verify-admin`, {
@@ -32,7 +32,10 @@ export async function loginAdmin(email: string, password: string): Promise<User>
     throw new Error('ACCESS_DENIED')
   }
 
-  // Save token for API calls
+  // 🔥 FIX: Force refresh the token NOW to pull the new 'ADMIN' custom claim from Firebase
+  token = await cred.user.getIdToken(true)
+
+  // Save the fresh claim-backed token for subsequent proxy API calls
   localStorage.setItem('adminToken', token)
   return cred.user
 }
