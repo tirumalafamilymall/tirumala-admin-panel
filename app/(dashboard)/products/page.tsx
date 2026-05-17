@@ -206,7 +206,12 @@ export default function ProductsPage() {
     } catch (e: any) { toast(e?.message || 'Upload failed', 'error') }
   }
 
-  async function handleZipUpload(file: File) {
+async function handleZipUpload(file: File) {
+    if (file.size > 150 * 1024 * 1024) {
+      toast('ZIP file is too large. Please keep it under 150MB.', 'error')
+      return
+    }
+
     setZipLoading(true)
     setZipResult(null)
     
@@ -596,13 +601,26 @@ export default function ProductsPage() {
         confirmLabel={deleting ? "Deleting..." : "Yes, Delete"} 
       />
 
-      {/* Excel Upload Modal */}
+{/* Excel Upload Modal */}
       <Modal open={excelOpen} onClose={() => setExcelOpen(false)} title="Excel / CSV Upload" wide
         footer={<button className="btn" onClick={() => setExcelOpen(false)}>Close</button>}>
-        <div style={{ marginBottom: 14, fontSize: 13, color: 'var(--ink-4)' }}>
-          <strong>Tip:</strong> Add a column named <code>sales_channel</code> and enter <code>INSTA_LIVE</code> to automatically mark products as Instagram Exclusives.
+        
+        <div style={{ marginBottom: 18, padding: '12px 16px', background: 'var(--cream-1)', borderRadius: 8, border: '1px solid var(--border)', fontSize: 12.5, color: 'var(--ink-3)', lineHeight: 1.7 }}>
+          <div style={{ marginBottom: 6 }}>
+            <strong style={{ color: '#9B1C1C' }}>Mandatory Columns:</strong><br/>
+            <code style={{ background: '#fff', padding: '2px 5px', borderRadius: 4 }}>product_code</code>, <code style={{ background: '#fff', padding: '2px 5px', borderRadius: 4 }}>name</code>, <code style={{ background: '#fff', padding: '2px 5px', borderRadius: 4 }}>department</code> (WOMEN/MEN/KIDS), <code style={{ background: '#fff', padding: '2px 5px', borderRadius: 4 }}>category</code>, <code style={{ background: '#fff', padding: '2px 5px', borderRadius: 4 }}>base_price</code>
+          </div>
+          <div style={{ marginBottom: 8 }}>
+            <strong>Optional Columns:</strong><br/>
+            <code style={{ background: '#fff', padding: '2px 5px', borderRadius: 4 }}>subcategory</code>, <code style={{ background: '#fff', padding: '2px 5px', borderRadius: 4 }}>brand</code>, <code style={{ background: '#fff', padding: '2px 5px', borderRadius: 4 }}>stock</code>, <code style={{ background: '#fff', padding: '2px 5px', borderRadius: 4 }}>color</code>, <code style={{ background: '#fff', padding: '2px 5px', borderRadius: 4 }}>size</code>, <code style={{ background: '#fff', padding: '2px 5px', borderRadius: 4 }}>sku</code>, <code style={{ background: '#fff', padding: '2px 5px', borderRadius: 4 }}>barcode</code>, <code style={{ background: '#fff', padding: '2px 5px', borderRadius: 4 }}>image</code> (URL)
+          </div>
+          <div style={{ borderTop: '1px dashed var(--border)', paddingTop: 8, fontSize: 11.5 }}>
+            <strong>Tip:</strong> Add a column named <code style={{ background: '#fff', padding: '1px 4px', borderRadius: 3 }}>sales_channel</code> and enter <code style={{ background: '#fff', padding: '1px 4px', borderRadius: 3 }}>INSTA_LIVE</code> to make products Instagram Exclusives.
+          </div>
         </div>
+
         <UploadZone label="Drag & drop your file here" subLabel="Accepts .xlsx · .xls · .csv" onFile={handleExcelFile} />
+        
         {excelResult && (
           <div style={{ marginTop:16 }}>
             <div className="excel-result-grid">
@@ -615,22 +633,26 @@ export default function ProductsPage() {
         )}
       </Modal>
 
-      {/* ZIP Images Modal */}
+{/* ZIP Images Modal */}
       <Modal open={zipOpen} onClose={() => setZipOpen(false)} title="Upload Product Images (ZIP)" wide
         footer={<button className="btn" onClick={() => setZipOpen(false)}>Close</button>}>
+        
         <div style={{ marginBottom:14, padding:'10px 14px', background:'var(--cream-2)', borderRadius:8, fontSize:12.5, color:'var(--ink-3)', lineHeight:1.7 }}>
           <strong>How it works:</strong><br />
-          1. Create a ZIP containing your product images<br />
+          1. Create a ZIP containing your product images <strong>(Max 150MB limit)</strong><br />
           2. Name each image after its <strong>Product Code</strong> — e.g. <code style={{ background:'#fff', padding:'1px 5px', borderRadius:3 }}>TFM-001.jpg</code><br />
           3. Upload the ZIP — images are matched, uploaded to cloud storage, and saved automatically
         </div>
 
-        {zipLoading ? (
+{zipLoading ? (
           <div style={{ textAlign:'center', padding:'30px 0', color:'var(--ink-5)', fontSize:13 }}>
             ⏳ Uploading and processing images…
           </div>
         ) : (
-          <UploadZone label="Drag & drop your ZIP file here" subLabel="ZIP containing JPG, PNG, or WebP images named by product code" onFile={handleZipUpload} />
+          <>
+            {/* 🔥 FIX: Added 150MB limit to the subLabel */}
+            <UploadZone label="Drag & drop your ZIP file here" subLabel="ZIP containing JPG/PNG images (Max size: 150MB)" onFile={handleZipUpload} />
+          </>
         )}
 
         {zipResult && (

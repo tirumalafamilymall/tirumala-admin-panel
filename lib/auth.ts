@@ -1,6 +1,7 @@
 import { initializeApp, getApps } from 'firebase/app'
 import { getAuth, signInWithEmailAndPassword, signOut, User } from 'firebase/auth'
 import { API_BASE } from './api' // We will export this from api.ts
+import { onAuthStateChanged } from 'firebase/auth'
 
 // 1. Initialize Firebase (Uses your frontend .env.local keys)
 const firebaseConfig = {
@@ -48,9 +49,17 @@ export function getAdminToken(): string | null {
   return localStorage.getItem('adminToken')
 }
 
-// Add this function:
+
+
 export async function refreshAdminToken(): Promise<string | null> {
-  const user = auth.currentUser
+  // 🔥 Wait for Firebase to securely resolve the auth state
+  const user = await new Promise<User | null>((resolve) => {
+    const unsubscribe = onAuthStateChanged(auth, (u) => {
+      unsubscribe()
+      resolve(u)
+    })
+  })
+
   if (!user) return null
   const token = await user.getIdToken(true)
   localStorage.setItem('adminToken', token)
