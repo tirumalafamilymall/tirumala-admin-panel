@@ -97,11 +97,13 @@ export default function ShippingPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-[1400px] mx-auto pb-12">
+    /* 🔥 REFACTORED: max-w-[1400px] replaced with max-w-350 */
+    <div className="space-y-6 max-w-350 mx-auto pb-12">
       
       {/* ── METRIC FILTERS SUMMARY HEADER ── */}
       <div className="filter-bar flex flex-wrap items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-gray-100 shadow-xs">
-        <div className="filter-search relative flex-1 min-w-[280px]">
+        {/* 🔥 REFACTORED: min-w-[280px] replaced with min-w-70 */}
+        <div className="filter-search relative flex-1 min-w-70">
           <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
           <input 
             type="text" 
@@ -227,10 +229,11 @@ export default function ShippingPage() {
 
                           {/* CASE 2: Order is inside Shiprocket engine database cells, but needs AWB router locking codes */}
                           {o.shiprocket_order_id && o.status === 'CONFIRMED' && (
+                            /* 🔥 REFACTORED: bg-gradient-to-r replaced with bg-linear-to-r */
                             <button
                               onClick={() => handleAllocateCourier(o.id, o.shiprocket_order_id)}
                               disabled={isProcessing}
-                              className="px-4 py-2 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-700 hover:to-amber-600 disabled:from-gray-300 text-white rounded-xl text-xs font-bold transition flex items-center gap-2 shadow-xs"
+                              className="px-4 py-2 bg-linear-to-r from-amber-600 to-amber-500 hover:from-amber-700 hover:to-amber-600 disabled:from-gray-300 text-white rounded-xl text-xs font-bold transition flex items-center gap-2 shadow-xs"
                             >
                               {isProcessing ? <Loader2 size={12} className="animate-spin" /> : <CalendarDays size={12} />}
                               Book Fleet Courier
