@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { getAdminToken } from '@/lib/auth'
-import { API_BASE } from '@/lib/api'
+import { API_BASE, uploadToSpaces } from '@/lib/api'
 import { toast } from '@/components/admin/ui'
 import { LayoutTemplate, Image as ImageIcon, Save, Loader2, UploadCloud, Link as LinkIcon, Sparkles, Trash2, Eye } from 'lucide-react'
 
@@ -52,24 +52,20 @@ export default function StorefrontEditor() {
     fetchConfig()
   }, [])
 
-  async function handleUpload(file: File, updateStateCallback: (url: string) => void, uploadKey: string) {
-    setUploading(uploadKey)
-    try {
-      const token = getAdminToken()
-      const headers = { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) }
-      const initRes = await fetch(`${API_BASE}/api/upload/presign?filename=${encodeURIComponent(file.name)}&type=${encodeURIComponent(file.type)}`, { headers })
-      const { uploadUrl, publicUrl } = await initRes.json()
-      if (!uploadUrl) throw new Error('Failed to get upload URL')
-      const uploadRes = await fetch(uploadUrl, { method: 'PUT', body: file, headers: { 'Content-Type': file.type, 'x-amz-acl': 'public-read' } })
-      if (!uploadRes.ok) throw new Error('Failed to upload file to cloud')
-      updateStateCallback(publicUrl)
-      toast('Image uploaded successfully', 'success')
-    } catch (e: any) {
-      toast(e.message || 'Upload failed', 'error')
-    } finally {
-      setUploading(null)
-    }
+async function handleUpload(file: File, updateStateCallback: (url: string) => void, uploadKey: string) {
+  setUploading(uploadKey)
+  try {
+    // 🔥 Uses your native, auto-refreshing admin pipeline directly
+    const publicUrl = await uploadToSpaces(file)
+    
+    updateStateCallback(publicUrl)
+    toast('Image uploaded successfully', 'success')
+  } catch (e: any) {
+    toast(e.message || 'Upload failed', 'error')
+  } finally {
+    setUploading(null)
   }
+}
 
   async function handleSave() {
     setSaving(true)

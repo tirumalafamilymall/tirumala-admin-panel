@@ -151,5 +151,26 @@ export const unlinkProduct = (postId: string, productId: string) =>
 export const uploadPresign = (filename: string, contentType: string) => 
   adminFetch(`/api/upload/presign?filename=${encodeURIComponent(filename)}&type=${encodeURIComponent(contentType)}`)
 
+// 🔥 ADDED: Dynamic binary cloud storage uploader with automated token refresh validation
+export const uploadToSpaces = async (file: File): Promise<string> => {
+  // 1. Fetch presigned signed link safely using token-safe adminFetch
+  const { uploadUrl, publicUrl } = await uploadPresign(file.name, file.type)
+  if (!uploadUrl) throw new Error('Failed to obtain a presigned cloud asset signature.')
+
+  // 2. Execute raw binary PUT to your cloud bucket (Does not get admin API authorization headers)
+  const res = await fetch(uploadUrl, {
+    method: 'PUT',
+    body: file,
+    headers: { 
+      'Content-Type': file.type,
+      'x-amz-acl': 'public-read' 
+    },
+  })
+
+  if (!res.ok) throw new Error('Binary cloud engine synchronization failed.')
+  return publicUrl
+}
+
 export const searchProductsForLink = (query: string) => 
   adminFetch(`/api/admin/products?search=${encodeURIComponent(query)}&limit=10&sales_channel=INSTA_LIVE`)
+
