@@ -59,7 +59,6 @@ export default function DashboardPage() {
             <div className="card-title">Recent Orders</div>
             <div className="card-subtitle">Latest transactions</div>
           </div>
-          <Link href="/admin/orders" className="card-action">View all →</Link>
         </div>
         <div className="tbl-wrap">
           <table>

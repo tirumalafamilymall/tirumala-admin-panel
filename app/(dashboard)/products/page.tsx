@@ -190,20 +190,24 @@ export default function ProductsPage() {
     }
   }
 
-  async function handleExcelFile(file: File) {
+async function handleExcelFile(file: File) {
     try {
       const res = await uploadExcel(file)
+      
+      // 🔥 FIX: Map to the new explicit counters from the backend
       const mappedResult = {
-        created: res.summary?.parents_processed || 0, 
-        updated: res.summary?.variants_processed || 0, 
+        created: res.summary?.created || 0, 
+        updated: res.summary?.updated || 0, 
         failed: res.summary?.failed || 0,
         parseErrors: res.summary?.parse_errors || 0
       }
       
       setExcelResult(mappedResult)
-      toast(`Processed ${mappedResult.created} products & ${mappedResult.updated} variants`, 'success')
+      toast(`Created ${mappedResult.created} & Updated ${mappedResult.updated} products`, 'success')
       loadProducts()
-    } catch (e: any) { toast(e?.message || 'Upload failed', 'error') }
+    } catch (e: any) { 
+      toast(e?.message || 'Upload failed', 'error') 
+    }
   }
 
 async function handleZipUpload(file: File) {
