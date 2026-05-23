@@ -1,281 +1,283 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { getOrders, getLabel, createShipment, generateAWB } from '@/lib/api' 
+import Link from 'next/link'
+import { getOrders, getLabel, createShipment, generateAWB } from '@/lib/api'
 import { Badge, SkeletonRows, Pagination, toast } from '@/components/admin/ui'
-import { Truck, FileText, CheckCircle2, Search, Loader2, Download, ExternalLink, CalendarDays, PackageSearch } from 'lucide-react'
+import { Loader2, Truck, Download, ExternalLink, Check } from 'lucide-react'
 
 export default function ShippingPage() {
-  const [orders, setOrders] = useState<any[]>([])
-  const [total, setTotal] = useState(0)
-  const [loading, setLoading] = useState(true)
+  const [orders,           setOrders]       = useState<any[]>([])
+  const [total,            setTotal]        = useState(0)
+  const [loading,          setLoading]      = useState(true)
   const [processingId, setProcessingId] = useState<string | null>(null)
-  
-  const [page, setPage] = useState(1)
-  const [search, setSearch] = useState('')
+  const [page,             setPage]         = useState(1)
+  const [search,           setSearch]       = useState('')
   const [statusFilter, setStatusFilter] = useState('CONFIRMED')
 
   const PER_PAGE = 20
 
-  const loadShippingQueue = useCallback(async () => {
+  const load = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await getOrders({ 
-        page, 
-        limit: PER_PAGE,
+      const res = await getOrders({
+        page,
+        limit:  PER_PAGE,
         status: statusFilter || undefined,
-        search: search || undefined
+        search: search || undefined,
       })
-      
-      const dataItems = res.orders || []
-      setOrders(dataItems)
-      setTotal(res.total || 0)
+      setOrders(res.orders ?? [])
+      setTotal(res.total ?? 0)
     } catch (e: any) {
-      toast("Failed to load shipping queue metrics", "error")
+      toast(e.message || 'Failed to load orders', 'error')
     } finally {
       setLoading(false)
     }
-  }, [page, search, statusFilter])
+  }, [page, statusFilter, search])
 
-  useEffect(() => { loadShippingQueue() }, [loadShippingQueue])
+  useEffect(() => { load() }, [load])
 
   useEffect(() => {
-    const t = setTimeout(() => { setPage(1); loadShippingQueue() }, 400)
+    const t = setTimeout(() => { setPage(1); load() }, 400)
     return () => clearTimeout(t)
   }, [search])
 
-  const handleCreateManifest = async (orderId: string) => {
+  async function handleLinkShiprocket(orderId: string) {
     setProcessingId(orderId)
     try {
       const res = await createShipment(orderId)
       if (res.success) {
-        toast(`Order linked to Shiprocket! ID: ${res.shiprocket.order_id}`, "success")
-        loadShippingQueue()
+        toast('Linked to Shiprocket successfully', 'success')
+        load()
       }
     } catch (e: any) {
-      toast(e.message || "Fulfillment initialization failed", "error")
+      toast(e.message || 'Failed to link Shiprocket', 'error')
     } finally {
       setProcessingId(null)
     }
   }
 
-  const handleAllocateCourier = async (orderId: string, shiprocketOrderId: string) => {
+  async function handleBookCourier(orderId: string, shiprocketOrderId: string) {
     setProcessingId(orderId)
     try {
       const res = await generateAWB(orderId, shiprocketOrderId)
       if (res.success) {
-        toast("AWB tracking number linked & pickup request dispatched!", "success")
-        loadShippingQueue()
+        toast('Courier booked and pickup scheduled', 'success')
+        load()
       }
     } catch (e: any) {
-      toast(e.message || "Fleet route allocation error", "error")
+      toast(e.message || 'Failed to book courier', 'error')
     } finally {
       setProcessingId(null)
     }
   }
 
-  const handleDownloadLabel = async (shiprocketOrderId: string) => {
+  async function handleDownloadLabel(shiprocketOrderId: string) {
     try {
-      toast("Downloading print documentation context...", "info")
       const res = await getLabel(shiprocketOrderId)
-      
-      if (res.label?.label_url) {
-        window.open(res.label.label_url, '_blank')
-      }
-      if (res.manifest?.manifest_url) {
-        window.open(res.manifest.manifest_url, '_blank')
-      }
-    } catch (e) {
-      toast("Failed to download print metrics", "error")
+      if (res.label?.label_url)    window.open(res.label.label_url, '_blank')
+      if (res.manifest?.manifest_url) window.open(res.manifest.manifest_url, '_blank')
+    } catch (e: any) {
+      toast(e.message || 'Failed to download label', 'error')
     }
   }
 
+  const statusPill = (status: string) => {
+    const map: Record<string, string> = {
+      CONFIRMED: 'badge badge-CONFIRMED',
+      SHIPPED:   'badge badge-SHIPPED',
+      DELIVERED: 'badge badge-DELIVERED',
+      PENDING:   'badge badge-PENDING',
+      CANCELLED: 'badge badge-CANCELLED',
+    }
+    return map[status] ?? 'badge'
+  }
+
   return (
-    <div className="space-y-8 max-w-350 mx-auto pb-12 animate-in fade-in duration-500">
-      
-      {/* ── PREMIUM HEADER ── */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-gray-900 flex items-center gap-3">
-            <PackageSearch className="text-amber-600" size={28} />
-            Logistics Command
-          </h1>
-          <p className="text-sm text-gray-500 mt-2 font-medium">
-            Manage your fleet routing, courier allocation, and dispatch documentation.
-          </p>
+    <>
+      {/* Header */}
+      <div style={{ marginBottom: 20 }}>
+        <div style={{ fontSize: 20, fontWeight: 600, color: 'var(--ink-1)' }}>Shipping</div>
+        <div style={{ fontSize: 12.5, color: 'var(--ink-5)', marginTop: 4 }}>
+          Manage courier assignments and dispatch
         </div>
       </div>
 
-      {/* ── METRIC FILTERS SUMMARY HEADER ── */}
-      <div className="filter-bar flex flex-wrap items-center justify-between gap-4 bg-white/80 backdrop-blur-md p-4 rounded-2xl border border-gray-200/60 shadow-sm">
-        <div className="filter-search relative flex-1 min-w-70">
-          <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input 
-            type="text" 
-            className="w-full pl-10 pr-4 py-2.5 bg-gray-50/50 border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 focus:bg-white transition-all shadow-inner"
-            placeholder="Search by Order reference, AWB, or Customer..." 
-            value={search} 
-            onChange={e => setSearch(e.target.value)} 
+      {/* Filters */}
+      <div className="filter-bar">
+        <div className="filter-search">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
+            <circle cx="6.5" cy="6.5" r="5"/><path d="M11 11l3 3"/>
+          </svg>
+          <input
+            type="text"
+            placeholder="Search by order number or customer…"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
           />
         </div>
-        
-        <div className="flex items-center gap-3">
-          <select 
-            className="px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-semibold text-gray-700 outline-none cursor-pointer hover:bg-gray-50 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 transition-all shadow-sm"
-            value={statusFilter} 
-            onChange={e => setStatusFilter(e.target.value)}
-          >
-            <option value="CONFIRMED">Ready to Manifest (Paid)</option>
-            <option value="SHIPPED">Dispatched & In Transit</option>
-            <option value="DELIVERED">Delivered Parcels</option>
-            <option value="">Full Operational Queue</option>
-          </select>
 
-          <div className="bg-gray-900 border border-gray-800 px-5 py-2.5 rounded-xl text-xs font-bold text-white tracking-wider uppercase shadow-md flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
-            {total} Shipments
-          </div>
+        <select className="flt-select" value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setPage(1) }}>
+          <option value="CONFIRMED">Ready to ship</option>
+          <option value="SHIPPED">Dispatched</option>
+          <option value="DELIVERED">Delivered</option>
+          <option value="">All orders</option>
+        </select>
+
+        <div style={{
+          display: 'inline-flex', alignItems: 'center', gap: 6,
+          fontSize: 12, fontWeight: 500, padding: '4px 12px',
+          borderRadius: 8, background: 'var(--cream-2)',
+          border: '1px solid var(--border)', color: 'var(--ink-4)',
+          marginLeft: 'auto'
+        }}>
+          <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#22c55e', display: 'inline-block' }} />
+          {total} shipments
         </div>
       </div>
 
-      {/* ── LOGISTICS AUTOMATION LEDGER ── */}
-      <div className="bg-white rounded-3xl border border-gray-200/60 shadow-xl shadow-gray-200/20 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+      {/* Table */}
+      <div className="card">
+        <div className="tbl-wrap">
+          <table>
             <thead>
-              <tr className="bg-gray-50/80 border-b border-gray-100">
-                <th className="p-5 text-[11px] font-bold text-gray-500 uppercase tracking-wider">Order Reference</th>
-                <th className="p-5 text-[11px] font-bold text-gray-500 uppercase tracking-wider">Logistics Routing Nodes</th>
-                <th className="p-5 text-[11px] font-bold text-gray-500 uppercase tracking-wider">Fulfillment Status</th>
-                <th className="p-5 text-[11px] font-bold text-gray-500 uppercase tracking-wider">Consignee & Destination</th>
-                <th className="p-5 text-[11px] font-bold text-gray-500 uppercase tracking-wider text-right">Automation Controls</th>
+              <tr>
+                <th>Order</th>
+                <th>Shiprocket</th>
+                <th>Status</th>
+                <th>Deliver to</th>
+                <th style={{ textAlign: 'right' }}>Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody>
               {loading ? (
-                <SkeletonRows cols={5} rows={6} />
+                <SkeletonRows cols={5} />
               ) : orders.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="text-center py-24">
-                    <div className="flex flex-col items-center justify-center text-gray-400">
-                      <PackageSearch size={48} className="mb-4 text-gray-300" strokeWidth={1.5} />
-                      <p className="text-sm font-medium tracking-wide">No active shipments in this queue.</p>
-                    </div>
+                  <td colSpan={5} style={{ textAlign: 'center', padding: 48, color: 'var(--ink-5)' }}>
+                    <div style={{ fontSize: 13 }}>No shipments found</div>
                   </td>
                 </tr>
               ) : (
-                orders.map((o) => {
+                orders.map(o => {
                   const isProcessing = processingId === o.id
-                  
+                  const addr = o.shipping_address ?? {}
+
                   return (
-                    <tr key={o.id} className="hover:bg-gray-50/60 transition-colors duration-200 group">
-                      
-                      {/* Order Reference Number */}
-                      <td className="p-5 align-top">
-                        <div className="flex flex-col gap-1.5">
-                          <span className="font-mono text-xs font-bold text-slate-800 bg-slate-100 border border-slate-200/60 px-2.5 py-1 rounded-lg w-fit shadow-sm">
+                    <tr key={o.id}>
+
+                      {/* Order */}
+                      <td>
+                        <Link href={`/admin/orders/${o.id}`}>
+                          <span style={{
+                            fontFamily: 'monospace', fontSize: 11, fontWeight: 600,
+                            padding: '2px 8px', background: 'var(--cream-2)',
+                            borderRadius: 4, color: 'var(--ink-2)',
+                            display: 'inline-block', cursor: 'pointer'
+                          }}>
                             {o.order_number}
                           </span>
-                          <span className="text-[11px] font-medium text-gray-400 pl-1">
-                            {new Date(o.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
-                          </span>
+                        </Link>
+                        <div style={{ fontSize: 11, color: 'var(--ink-5)', marginTop: 4 }}>
+                          {new Date(o.created_at).toLocaleDateString('en-IN', {
+                            day: 'numeric', month: 'short', year: 'numeric'
+                          })}
                         </div>
                       </td>
-                      
-                      {/* Shiprocket Internal Order Mappings */}
-                      <td className="p-5 align-top">
+
+                      {/* Shiprocket */}
+                      <td>
                         {o.shiprocket_order_id ? (
-                          <div className="flex flex-col gap-1.5">
-                            <span className="text-xs font-bold text-gray-700 font-mono flex items-center gap-1.5">
-                              <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
-                              SR: {o.shiprocket_order_id}
-                            </span>
+                          <div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, fontFamily: 'monospace', color: 'var(--ink-3)' }}>
+                              <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#3b82f6', display: 'inline-block', flexShrink: 0 }} />
+                              {o.shiprocket_order_id}
+                            </div>
                             {o.tracking_url && (
-                              <a 
-                                href={o.tracking_url} 
-                                target="_blank" 
-                                rel="noreferrer" 
-                                className="text-[11px] text-amber-600 hover:text-amber-700 font-semibold flex items-center gap-1 w-fit transition-colors"
+                              <a
+                                href={o.tracking_url}
+                                target="_blank"
+                                rel="noreferrer"
+                                style={{ fontSize: 11, color: 'var(--maroon)', display: 'inline-flex', alignItems: 'center', gap: 3, marginTop: 3 }}
                               >
-                                <ExternalLink size={12} /> Live Tracking
+                                <ExternalLink size={10} /> Live tracking
                               </a>
                             )}
                           </div>
                         ) : (
-                          <span className="inline-flex items-center gap-1.5 text-xs italic text-gray-400 font-medium">
-                            <span className="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
-                            Unmanifested
+                          <span style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--ink-5)', display: 'flex', alignItems: 'center', gap: 5 }}>
+                            <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'var(--border)', display: 'inline-block' }} />
+                            Not linked
                           </span>
                         )}
                       </td>
 
-                      {/* Status Badges */}
-                      <td className="p-5 align-top">
-                        <div className="pt-1">
-                           <Badge status={o.status} />
+                      {/* Status */}
+                      <td>
+                        <Badge status={o.status} />
+                      </td>
+
+                      {/* Deliver to */}
+                      <td>
+                        <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--ink-1)' }}>{addr.name}</div>
+                        <div style={{ fontSize: 11, color: 'var(--ink-5)', marginTop: 2, lineHeight: 1.5 }}>
+                          {addr.city}, {addr.state}<br />
+                          PIN: {addr.pincode}
                         </div>
                       </td>
 
-                      {/* Customer Address Node Summary */}
-                      <td className="p-5 align-top">
-                        <div className="text-sm max-w-[220px]">
-                          <p className="font-bold text-gray-900 truncate">{(o.shipping_address as any)?.name}</p>
-                          <p className="text-gray-500 font-medium text-xs leading-relaxed mt-1">
-                            {(o.shipping_address as any)?.city}, {(o.shipping_address as any)?.state} <br/> 
-                            PIN: <span className="text-gray-700 font-semibold">{(o.shipping_address as any)?.pincode}</span>
-                          </p>
-                        </div>
-                      </td>
+                      {/* Actions */}
+                      <td style={{ textAlign: 'right' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6 }}>
 
-                      {/* Automation Dispatch Controls */}
-                      <td className="p-5 align-top text-right">
-                        <div className="flex items-center justify-end gap-2 pt-1 opacity-90 group-hover:opacity-100 transition-opacity">
-                          
-                          {/* CASE 1: Need to Link Shiprocket */}
                           {!o.shiprocket_order_id && (
                             <button
-                              onClick={() => handleCreateManifest(o.id)}
+                              className="btn btn-sm"
+                              onClick={() => handleLinkShiprocket(o.id)}
                               disabled={isProcessing}
-                              className="px-4 py-2 bg-gray-900 hover:bg-gray-800 disabled:bg-gray-200 disabled:text-gray-400 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-2 shadow-md hover:shadow-lg active:scale-95"
                             >
-                              {isProcessing ? <Loader2 size={14} className="animate-spin" /> : <Truck size={14} />}
-                              Link Shiprocket
+                              {isProcessing
+                                ? <Loader2 size={12} className="animate-spin" />
+                                : <Truck size={12} />}
+                              {isProcessing ? 'Linking…' : 'Link Shiprocket'}
                             </button>
                           )}
 
-                          {/* CASE 2: Book Fleet */}
                           {o.shiprocket_order_id && o.status === 'CONFIRMED' && (
                             <button
-                              onClick={() => handleAllocateCourier(o.id, o.shiprocket_order_id)}
+                              className="btn btn-sm btn-gold"
+                              onClick={() => handleBookCourier(o.id, o.shiprocket_order_id)}
                               disabled={isProcessing}
-                              className="px-4 py-2 bg-linear-to-r from-amber-600 to-amber-500 hover:from-amber-700 hover:to-amber-600 disabled:from-gray-200 disabled:text-gray-400 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-2 shadow-md hover:shadow-lg hover:shadow-amber-500/20 active:scale-95"
                             >
-                              {isProcessing ? <Loader2 size={14} className="animate-spin" /> : <CalendarDays size={14} />}
-                              Book Fleet Courier
+                              {isProcessing && <Loader2 size={12} className="animate-spin" />}
+                              {isProcessing ? 'Booking…' : 'Book courier'}
                             </button>
                           )}
 
-                          {/* CASE 3: Downloads */}
                           {o.shiprocket_order_id && (
                             <button
+                              className="btn btn-sm"
                               onClick={() => handleDownloadLabel(o.shiprocket_order_id)}
-                              className="p-2.5 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 rounded-xl transition-all shadow-sm hover:shadow-md flex items-center justify-center active:scale-95"
-                              title="Download Shipping Slips & Manifests"
+                              title="Download label"
+                              style={{ padding: '4px 8px' }}
                             >
-                              <Download size={15} />
+                              <Download size={12} />
                             </button>
                           )}
 
-                          {/* Completed State */}
                           {o.status === 'DELIVERED' && (
-                            <div className="w-9 h-9 rounded-full bg-green-100 border border-green-200 flex items-center justify-center text-green-600 shadow-sm" title="Delivered Safely">
-                              <CheckCircle2 size={18} strokeWidth={2.5} />
+                            <div style={{
+                              width: 28, height: 28, borderRadius: '50%',
+                              background: '#dcfce7',
+                              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                              color: '#16a34a'
+                            }}>
+                              <Check size={14} />
                             </div>
                           )}
 
                         </div>
                       </td>
-
                     </tr>
                   )
                 })
@@ -283,13 +285,15 @@ export default function ShippingPage() {
             </tbody>
           </table>
         </div>
-        
-        {/* Pagination Controls */}
-        <div className="border-t border-gray-100 p-5 bg-gray-50/30">
-          <Pagination page={page} total={Math.ceil(total / PER_PAGE)} perPage={PER_PAGE} totalItems={total} onChange={setPage} />
-        </div>
-      </div>
 
-    </div>
+        <Pagination
+          page={page}
+          total={Math.ceil(total / PER_PAGE)}
+          perPage={PER_PAGE}
+          totalItems={total}
+          onChange={setPage}
+        />
+      </div>
+    </>
   )
 }
