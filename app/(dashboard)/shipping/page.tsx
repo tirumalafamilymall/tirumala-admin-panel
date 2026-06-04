@@ -91,7 +91,7 @@ export default function ShippingPage() {
               {loading ? <SkeletonRows cols={5} /> : orders.map(o => (
                 <tr key={o.id}>
                   <td>
-                    <Link href={`/admin/orders/${o.id}`} style={{ fontWeight: 600, color: 'var(--ink-2)' }}>{o.order_number}</Link>
+                    <Link href={`/orders/${o.id}`} style={{ fontWeight: 600, color: 'var(--ink-2)' }}>{o.order_number}</Link>
                   </td>
                   <td>
                     {o.shiprocket_order_id ? (

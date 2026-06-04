@@ -96,7 +96,7 @@ export default function OrderDetailPage() {
           <div className="detail-card">
             <div className="card-title" style={{ display:'flex', alignItems:'center', gap:8 }}><Truck size={16}/> Fulfillment Summary</div>
             <div className="detail-row"><span className="detail-lbl">Current Status</span><Badge status={order.status} /></div>
-            <div className="detail-row"><span className="detail-lbl">Tracking ID</span><span style={{ fontFamily:'monospace' }}>{order.awb ?? 'Not yet shipped'}</span></div>
+            <div className="detail-row"><span className="detail-lbl">Tracking ID</span><span style={{ fontFamily:'monospace' }}>{order.awb_code ?? 'Not yet shipped'}</span></div>
             {order.tracking_url && (
               <a href={order.tracking_url} target="_blank" className="btn btn-sm" style={{ marginTop: 10, width: '100%', justifyContent: 'center' }}>
                 Track Shipment <ExternalLink size={12} />

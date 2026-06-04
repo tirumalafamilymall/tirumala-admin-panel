@@ -47,7 +47,7 @@ export default function ProductsPage() {
   const [search,      setSearch]      = useState('')
   const [catFilter,   setCatFilter]   = useState('')
   const [statusFilter,setStatusFilter]= useState('')
-  const [instaLiveFilter, setInstaLiveFilter] = useState(false) // 🔥 NEW: Added toggle filter state
+  const [instaLiveFilter, setInstaLiveFilter] = useState(false)
   const [page,        setPage]        = useState(1)
   const [addOpen,     setAddOpen]     = useState(false)
   const [editItem,    setEditItem]    = useState<Product | null>(null)
@@ -56,6 +56,7 @@ export default function ProductsPage() {
   const [formErrors,  setFormErrors]  = useState<Record<string,string>>({})
   const [excelOpen,   setExcelOpen]   = useState(false)
   const [excelResult, setExcelResult] = useState<ExcelResult | null>(null)
+  const [excelLoading, setExcelLoading] = useState(false) 
   const [zipOpen,     setZipOpen]     = useState(false)
   const [zipResult,   setZipResult]   = useState<ZipResult | null>(null)
   const [zipLoading,  setZipLoading]  = useState(false)
@@ -64,6 +65,7 @@ export default function ProductsPage() {
   const [deleting, setDeleting] = useState(false)
   const [togglingId, setTogglingId] = useState<string | null>(null)
   const [categories, setCategories] = useState<string[]>([])
+  
 
   const PER_PAGE = 20
 
@@ -191,10 +193,12 @@ export default function ProductsPage() {
   }
 
 async function handleExcelFile(file: File) {
+    setExcelLoading(true) 
+    setExcelResult(null)
+    
     try {
       const res = await uploadExcel(file)
       
-      // 🔥 FIX: Map to the new explicit counters from the backend
       const mappedResult = {
         created: res.summary?.created || 0, 
         updated: res.summary?.updated || 0, 
@@ -207,6 +211,8 @@ async function handleExcelFile(file: File) {
       loadProducts()
     } catch (e: any) { 
       toast(e?.message || 'Upload failed', 'error') 
+    } finally {
+      setExcelLoading(false) 
     }
   }
 
@@ -623,7 +629,14 @@ async function handleZipUpload(file: File) {
           </div>
         </div>
 
-        <UploadZone label="Drag & drop your file here" subLabel="Accepts .xlsx · .xls · .csv" onFile={handleExcelFile} />
+
+        {excelLoading ? (
+          <div style={{ textAlign:'center', padding:'30px 0', color:'var(--ink-5)', fontSize:13 }}>
+            ⏳ Uploading and processing products...
+          </div>
+        ) : (
+          <UploadZone label="Drag & drop your file here" subLabel="Accepts .xlsx · .xls · .csv" onFile={handleExcelFile} />
+        )}
         
         {excelResult && (
           <div style={{ marginTop:16 }}>
