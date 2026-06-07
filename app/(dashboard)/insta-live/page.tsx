@@ -2,12 +2,11 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link' 
 import { getInstaLivePosts, createInstaPost, updateInstaPost, deleteInstaPost, linkProduct, unlinkProduct, searchProductsForLink } from '@/lib/api'
-import { getAdminToken } from '@/lib/auth' // 🔥 Need this for secure upload
+import { getAdminToken } from '@/lib/auth' 
 import { API_BASE } from '@/lib/api'
-import { Modal, Confirm, Toggle, UploadZone, toast } from '@/components/admin/ui' // 🔥 Added UploadZone
+import { Modal, Confirm, Toggle, UploadZone, toast } from '@/components/admin/ui' 
 import { Camera, Link as LinkIcon, Trash2, Search, Package, Loader2 } from 'lucide-react'
 
-// 🔥 Added thumbnail to the form state
 const emptyForm = { title: '', instagramUrl: '', thumbnail: '', is_active: true }
 
 export default function InstaLivePage() {
@@ -38,7 +37,13 @@ export default function InstaLivePage() {
   const [prodSearch, setProdSearch] = useState('')
   const [searchResults, setSearchResults] = useState<any[]>([])
   const [saving, setSaving] = useState(false)
-  const [uploadingMedia, setUploadingMedia] = useState(false) // 🔥 State for upload
+  
+  // 🔥 Media Upload State
+  const [uploadingMedia, setUploadingMedia] = useState(false) 
+  
+  // 🔥 NEW: Specific Product Linking Loading States
+  const [linkingProductId, setLinkingProductId] = useState<string | null>(null)
+  const [unlinkingProductId, setUnlinkingProductId] = useState<string | null>(null)
 
   function fset(k: string, v: any) { setForm(f => ({ ...f, [k]: v })) }
 
@@ -50,7 +55,6 @@ export default function InstaLivePage() {
     return Object.keys(errs).length === 0
   }
 
-  // 🔥 NEW: Handle direct video/image upload to DigitalOcean
   async function handleMediaUpload(file: File) {
     setUploadingMedia(true)
     try {
@@ -82,7 +86,7 @@ export default function InstaLivePage() {
         title: form.title || undefined,
         instagram_url: form.instagramUrl,
         is_active: form.is_active,
-        thumbnail: form.thumbnail // 🔥 Uses uploaded file
+        thumbnail: form.thumbnail 
       }
 
       if (editItem) {
@@ -117,20 +121,32 @@ export default function InstaLivePage() {
     } catch { setSearchResults([]) }
   }
 
+  // 🔥 ADDED LOADING TO LINK FUNCTION
   async function handleLinkProduct(postId: string, product: any) {
+    setLinkingProductId(product.id)
     try {
       await linkProduct(postId, product.id)
       toast('Product linked', 'success')
-      loadPosts()
-    } catch (e: any) { toast(e.message, 'error') }
+      await loadPosts() // Refresh backend data to update currently linked list
+    } catch (e: any) { 
+      toast(e.message, 'error') 
+    } finally {
+      setLinkingProductId(null)
+    }
   }
 
+  // 🔥 ADDED LOADING TO UNLINK FUNCTION
   async function handleUnlinkProduct(postId: string, productId: string) {
+    setUnlinkingProductId(productId)
     try {
       await unlinkProduct(postId, productId)
       toast('Product removed', 'success')
-      loadPosts()
-    } catch (e: any) { toast(e.message, 'error') }
+      await loadPosts() // Refresh backend data
+    } catch (e: any) { 
+      toast(e.message, 'error') 
+    } finally {
+      setUnlinkingProductId(null)
+    }
   }
 
   const linkPost = posts?.find(p => p.id === linkPostId)
@@ -153,7 +169,9 @@ export default function InstaLivePage() {
 
       <div className="insta-grid">
         {loading ? (
-          <div style={{ padding: 40, textAlign: 'center' }}><Loader2 className="animate-spin mx-auto" /></div>
+          <div style={{ padding: 40, textAlign: 'center', width: '100%', gridColumn: '1 / -1' }}>
+            <Loader2 className="animate-spin mx-auto text-(--ink-4)" size={32} />
+          </div>
         ) : posts?.length > 0 ? (
           posts.map(p => (
             <div className="insta-card" key={p.id}>
@@ -162,7 +180,6 @@ export default function InstaLivePage() {
               }}>
                 {p.is_active && <div className="insta-live-badge">● LIVE</div>}
                 
-                {/* 🔥 Shows Video or Image in Admin Grid */}
                 {p.thumbnail?.includes('.mp4') ? (
                   <video src={p.thumbnail} autoPlay loop muted style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.8 }} />
                 ) : (
@@ -200,7 +217,6 @@ export default function InstaLivePage() {
         title={editItem ? 'Update Session' : 'New Instagram Live'}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14, padding: '10px 0' }}>
           
-          {/* 🔥 NEW: Video Upload Zone */}
           <div className="fgroup full">
             <label className="flabel">10-Second Video Preview (or Image) *</label>
             {form.thumbnail ? (
@@ -215,7 +231,10 @@ export default function InstaLivePage() {
                 <button className="btn btn-sm" onClick={() => fset('thumbnail', '')} style={{ color: 'var(--red-1)' }}>Remove</button>
               </div>
             ) : uploadingMedia ? (
-              <div style={{ padding: '15px', textAlign: 'center', background: 'var(--cream-2)', borderRadius: 6, fontSize: 13, color: 'var(--ink-4)' }}>⏳ Uploading to Cloud...</div>
+              // 🔥 UPDATED UPLOAD SPINNER
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '15px', background: 'var(--cream-2)', borderRadius: 6, fontSize: 13, color: 'var(--ink-4)' }}>
+                <Loader2 size={16} className="animate-spin" /> Uploading to Cloud...
+              </div>
             ) : (
               <UploadZone label="Upload 10s Clip" subLabel=".mp4, .jpg, .png (Keep under 5MB for speed)" onFile={handleMediaUpload} />
             )}
@@ -235,13 +254,13 @@ export default function InstaLivePage() {
             <label className="flabel" style={{ margin: 0 }}>Active on Store</label>
             <Toggle checked={form.is_active} onChange={v => fset('is_active', v)} />
           </div>
-          <button className="btn btn-primary" onClick={handleSave} disabled={saving || uploadingMedia} style={{ marginTop: 10 }}>
+          <button className="btn btn-primary" onClick={handleSave} disabled={saving || uploadingMedia} style={{ marginTop: 10, display: 'flex', justifyContent: 'center', gap: 8 }}>
+            {saving ? <Loader2 size={16} className="animate-spin" /> : null}
             {saving ? 'Processing...' : 'Save Session'}
           </button>
         </div>
       </Modal>
 
-      {/* Product Linking Modal remains unchanged */}
       <Modal open={!!linkPostId} onClose={() => setLinkPostId(null)} title="Link Products to Session" wide>
         <div className="fgroup" style={{ marginBottom: 16 }}>
           <div className="filter-search">
@@ -267,7 +286,17 @@ export default function InstaLivePage() {
                     </span>
                   </div>
                 </div>
-                <button className="btn btn-xs btn-primary" onClick={() => linkPostId && handleLinkProduct(linkPostId, r)}>+ Link</button>
+                
+                {/* 🔥 LINKING PRODUCT BUTTON WITH SPINNER */}
+                <button 
+                  className="btn btn-xs btn-primary" 
+                  disabled={linkingProductId === r.id}
+                  onClick={() => linkPostId && handleLinkProduct(linkPostId, r)}
+                  style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+                >
+                  {linkingProductId === r.id ? <Loader2 size={12} className="animate-spin" /> : '+'}
+                  {linkingProductId === r.id ? 'Linking...' : 'Link'}
+                </button>
               </div>
             ))}
           </div>
@@ -277,20 +306,33 @@ export default function InstaLivePage() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {!linkPost?.products?.length ? (
             <div style={{ padding: 20, textAlign: 'center', color: 'var(--ink-4)', fontSize: 13 }}>No products linked to this session.</div>
-          ) : linkPost.products.map((p: any) => (
-            <div key={p.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px', background: 'white', border: '1px solid var(--border)', borderRadius: 10 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <Package size={14} style={{ color: 'var(--ink-4)' }} />
-                <div>
-                  <div style={{ fontSize: 13, fontWeight: 600 }}>{p.product?.name || p.name}</div>
-                  <div style={{ fontSize: 11, color: 'var(--ink-5)' }}>
-                    ₹{Number(p.product?.base_price || 0).toLocaleString('en-IN')} · {p.product?.stock} Total Stock
+          ) : linkPost.products.map((p: any) => {
+            const currentProductId = p.product?.id || p.id
+            return (
+              <div key={p.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px', background: 'white', border: '1px solid var(--border)', borderRadius: 10 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <Package size={14} style={{ color: 'var(--ink-4)' }} />
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 600 }}>{p.product?.name || p.name}</div>
+                    <div style={{ fontSize: 11, color: 'var(--ink-5)' }}>
+                      ₹{Number(p.product?.base_price || 0).toLocaleString('en-IN')} · {p.product?.stock} Total Stock
+                    </div>
                   </div>
                 </div>
+                
+                {/* 🔥 UNLINKING PRODUCT BUTTON WITH SPINNER */}
+                <button 
+                  className="btn btn-xs btn-danger" 
+                  disabled={unlinkingProductId === currentProductId}
+                  onClick={() => linkPostId && handleUnlinkProduct(linkPostId, currentProductId)}
+                  style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+                >
+                  {unlinkingProductId === currentProductId ? <Loader2 size={12} className="animate-spin" /> : null}
+                  {unlinkingProductId === currentProductId ? 'Unlinking...' : 'Unlink'}
+                </button>
               </div>
-              <button className="btn btn-xs btn-danger" onClick={() => linkPostId && handleUnlinkProduct(linkPostId, p.product?.id || p.id)}>Unlink</button>
-            </div>
-          ))}
+            )
+          })}
         </div>
         <div style={{ marginTop: 20, textAlign: 'right' }}>
           <button className="btn" onClick={() => setLinkPostId(null)}>Close</button>
