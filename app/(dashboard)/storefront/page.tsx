@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { getAdminToken } from '@/lib/auth'
 import { API_BASE, uploadToSpaces } from '@/lib/api'
 import { toast } from '@/components/admin/ui'
-import { LayoutTemplate, Image as ImageIcon, Save, Loader2, UploadCloud, Link as LinkIcon, Sparkles, Trash2, Eye } from 'lucide-react'
+import { LayoutTemplate, Image as ImageIcon, Save, Loader2, UploadCloud, Link as LinkIcon, Sparkles, Trash2, Eye, Plus } from 'lucide-react'
 
 const DEFAULT_CONFIG = {
   heroSlider: [{ img: '', href: '#' }],
@@ -16,10 +16,10 @@ const DEFAULT_CONFIG = {
 
 const SECTION_META = [
   { num: '01', label: 'Hero Slider', sub: 'Multi-image rotating carousel deck', icon: ImageIcon, tip: 'Recommended: 1400×600px · 21:9 ratio' },
-  { num: '02', label: 'Shop By Category', sub: '6-slot navigation grid', icon: LayoutTemplate, tip: '6 fixed category cards' },
+  { num: '02', label: 'Shop By Category', sub: 'Dynamic navigation carousel', icon: LayoutTemplate, tip: 'Unlimited scrolling category cards' },
   { num: '03', label: 'Discover Style', sub: 'Department cover images', icon: ImageIcon, tip: 'Women · Men · Kids' },
   { num: '04', label: 'Flash Sale Strip', sub: 'Campaign horizon banner', icon: ImageIcon, tip: 'Recommended: 1400×260px' },
-  { num: '05', label: 'New Season Picks', sub: '5-slot showcase grid', icon: LayoutTemplate, tip: 'Slot 01 renders as hero tile' },
+  { num: '05', label: 'New Season Picks', sub: 'Dynamic showcase carousel', icon: LayoutTemplate, tip: 'Slot 01 renders as hero tile' },
 ]
 
 export default function StorefrontEditor() {
@@ -39,8 +39,9 @@ export default function StorefrontEditor() {
             ...data.content,
             heroSlider: data.content.heroSlider?.length > 0 ? data.content.heroSlider : DEFAULT_CONFIG.heroSlider,
             discoverStyle: { ...DEFAULT_CONFIG.discoverStyle, ...data.content.discoverStyle },
-            shopByCategory: data.content.shopByCategory?.length === 6 ? data.content.shopByCategory : DEFAULT_CONFIG.shopByCategory,
-            newSeason: data.content.newSeason?.length === 5 ? data.content.newSeason : DEFAULT_CONFIG.newSeason,
+            // 🔥 REMOVED STRICT LENGTH CHECKS to support dynamic arrays
+            shopByCategory: data.content.shopByCategory?.length > 0 ? data.content.shopByCategory : DEFAULT_CONFIG.shopByCategory,
+            newSeason: data.content.newSeason?.length > 0 ? data.content.newSeason : DEFAULT_CONFIG.newSeason,
           })
         }
       } catch {
@@ -52,20 +53,18 @@ export default function StorefrontEditor() {
     fetchConfig()
   }, [])
 
-async function handleUpload(file: File, updateStateCallback: (url: string) => void, uploadKey: string) {
-  setUploading(uploadKey)
-  try {
-    // 🔥 Uses your native, auto-refreshing admin pipeline directly
-    const publicUrl = await uploadToSpaces(file)
-    
-    updateStateCallback(publicUrl)
-    toast('Image uploaded successfully', 'success')
-  } catch (e: any) {
-    toast(e.message || 'Upload failed', 'error')
-  } finally {
-    setUploading(null)
+  async function handleUpload(file: File, updateStateCallback: (url: string) => void, uploadKey: string) {
+    setUploading(uploadKey)
+    try {
+      const publicUrl = await uploadToSpaces(file)
+      updateStateCallback(publicUrl)
+      toast('Image uploaded successfully', 'success')
+    } catch (e: any) {
+      toast(e.message || 'Upload failed', 'error')
+    } finally {
+      setUploading(null)
+    }
   }
-}
 
   async function handleSave() {
     setSaving(true)
@@ -85,20 +84,39 @@ async function handleUpload(file: File, updateStateCallback: (url: string) => vo
     setSaving(false)
   }
 
+  // ─── DYNAMIC ARRAY HANDLERS ───
   const updateCategory = (index: number, key: string, value: string) => {
     const newCats = [...config.shopByCategory]
     newCats[index] = { ...newCats[index], [key]: value }
     setConfig({ ...config, shopByCategory: newCats })
   }
 
-  const updateDiscoverStyle = (key: 'women' | 'men' | 'kids', value: string) => {
-    setConfig({ ...config, discoverStyle: { ...config.discoverStyle, [key]: value } })
+  const addCategory = () => {
+    setConfig({ ...config, shopByCategory: [...config.shopByCategory, { name: '', href: '', img: '' }] })
+  }
+
+  const removeCategory = (index: number) => {
+    const newCats = config.shopByCategory.filter((_, i) => i !== index)
+    setConfig({ ...config, shopByCategory: newCats.length > 0 ? newCats : [{ name: '', href: '', img: '' }] })
   }
 
   const updateNewSeason = (index: number, key: string, value: string) => {
     const newSeason = [...config.newSeason]
     newSeason[index] = { ...newSeason[index], [key]: value }
     setConfig({ ...config, newSeason })
+  }
+
+  const addNewSeason = () => {
+    setConfig({ ...config, newSeason: [...config.newSeason, { title: '', desc: '', href: '', img: '' }] })
+  }
+
+  const removeNewSeason = (index: number) => {
+    const newSeason = config.newSeason.filter((_, i) => i !== index)
+    setConfig({ ...config, newSeason: newSeason.length > 0 ? newSeason : [{ title: '', desc: '', href: '', img: '' }] })
+  }
+
+  const updateDiscoverStyle = (key: 'women' | 'men' | 'kids', value: string) => {
+    setConfig({ ...config, discoverStyle: { ...config.discoverStyle, [key]: value } })
   }
 
   if (loading) {
@@ -166,25 +184,19 @@ async function handleUpload(file: File, updateStateCallback: (url: string) => vo
         @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap');
         
         .sf-editor * { box-sizing: border-box; }
-        
         .sf-input:focus { border-color: #9B1C1C !important; box-shadow: 0 0 0 3px rgba(155,28,28,0.06); }
-        
         .upload-zone:hover { border-color: #9B1C1C !important; background: #FDF8F8 !important; }
-        
         .img-card:hover .img-overlay { opacity: 1 !important; }
-        
         .slot-card { transition: box-shadow 0.2s, transform 0.2s; }
         .slot-card:hover { box-shadow: 0 4px 20px rgba(0,0,0,0.08); transform: translateY(-1px); }
         
         .pub-btn:hover:not(:disabled) { background: #7F1D1D !important; box-shadow: 0 8px 24px rgba(155,28,28,0.25) !important; transform: translateY(-1px); }
         .pub-btn:active:not(:disabled) { transform: translateY(0); }
         .pub-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-        
         .remove-btn:hover { background: #7F1D1D !important; }
 
         @keyframes spin { to { transform: rotate(360deg) } }
         .spin { animation: spin 0.8s linear infinite; }
-
         @keyframes fadeUp { from { opacity: 0; transform: translateY(12px) } to { opacity: 1; transform: translateY(0) } }
         .fade-up { animation: fadeUp 0.4s ease forwards; }
       `}</style>
@@ -195,42 +207,24 @@ async function handleUpload(file: File, updateStateCallback: (url: string) => vo
         <div style={{
           position: 'sticky', top: 12, zIndex: 50, marginBottom: 40,
           background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(16px)',
-          border: '1px solid #EDE9E6',
-          borderRadius: 18,
-          padding: '16px 24px',
+          border: '1px solid #EDE9E6', borderRadius: 18, padding: '16px 24px',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16,
           boxShadow: '0 4px 24px rgba(0,0,0,0.06)',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-            <div style={{
-              width: 44, height: 44, borderRadius: 12,
-              background: 'linear-gradient(135deg, #9B1C1C, #C53030)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: '0 4px 12px rgba(155,28,28,0.2)',
-            }}>
+            <div style={{ width: 44, height: 44, borderRadius: 12, background: 'linear-gradient(135deg, #9B1C1C, #C53030)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(155,28,28,0.2)' }}>
               <LayoutTemplate size={20} color="#fff" />
             </div>
             <div>
-              <div style={{ fontFamily: "'DM Serif Display', serif", fontSize: 18, color: '#111', lineHeight: 1.2 }}>
-                Storefront Editor
-              </div>
-              <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 1, letterSpacing: '0.02em' }}>
-                Visual content management · Live on publish
-              </div>
+              <div style={{ fontFamily: "'DM Serif Display', serif", fontSize: 18, color: '#111', lineHeight: 1.2 }}>Storefront Editor</div>
+              <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 1, letterSpacing: '0.02em' }}>Visual content management · Live on publish</div>
             </div>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{ display: 'flex', gap: 4, marginRight: 8 }}>
               {SECTION_META.map(s => (
-                <div key={s.num} style={{
-                  fontSize: 9, fontWeight: 700, letterSpacing: '0.08em',
-                  padding: '3px 7px', borderRadius: 6,
-                  background: '#F8F5F3', color: '#9CA3AF',
-                  border: '1px solid #EDE9E6',
-                }}>
-                  {s.num}
-                </div>
+                <div key={s.num} style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.08em', padding: '3px 7px', borderRadius: 6, background: '#F8F5F3', color: '#9CA3AF', border: '1px solid #EDE9E6' }}>{s.num}</div>
               ))}
             </div>
 
@@ -238,22 +232,7 @@ async function handleUpload(file: File, updateStateCallback: (url: string) => vo
               className="pub-btn"
               onClick={handleSave}
               disabled={saving}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 8,
-                padding: '10px 22px',
-                background: '#9B1C1C',
-                color: '#fff',
-                border: 'none',
-                borderRadius: 12,
-                fontSize: 11,
-                fontWeight: 700,
-                letterSpacing: '0.1em',
-                textTransform: 'uppercase',
-                cursor: 'pointer',
-                transition: 'all 0.2s',
-                boxShadow: '0 4px 14px rgba(155,28,28,0.2)',
-                fontFamily: 'inherit',
-              }}
+              style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 22px', background: '#9B1C1C', color: '#fff', border: 'none', borderRadius: 12, fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 4px 14px rgba(155,28,28,0.2)', fontFamily: 'inherit' }}
             >
               {saving
                 ? <><div style={{ width: 13, height: 13, border: '2px solid rgba(255,255,255,0.3)', borderTop: '2px solid #fff', borderRadius: '50%' }} className="spin" /> Publishing…</>
@@ -265,7 +244,7 @@ async function handleUpload(file: File, updateStateCallback: (url: string) => vo
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
 
-          {/* ── 🔥 UPGRADED SECTION 1: DYNAMIC HERO SLIDER DECK ── */}
+          {/* ── SECTION 1: HERO SLIDER ── */}
           <div style={sectionStyle} className="fade-up slot-card">
             <div style={sectionHeaderStyle}>
               <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.15em', color: '#C53030', minWidth: 24 }}>01</div>
@@ -309,8 +288,7 @@ async function handleUpload(file: File, updateStateCallback: (url: string) => vo
                 )
               })}
 
-              {/* Seamless, consistent upload card slot integration */}
-              <div className="slot-card" style={{ border: '1px solid #F0EBE8', borderRadius: 14, overflow: 'hidden', background: '#FDFCFB' }}>
+              <div className="slot-card" style={{ border: '1px dashed #D1D5DB', borderRadius: 14, overflow: 'hidden', background: '#FDFCFB' }}>
                 <div style={{ padding: '10px 14px', background: '#F8F5F3', borderBottom: '1px solid #EDE9E6', display: 'flex', alignItems: 'center' }}>
                   <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.18em', color: '#B0A8A4', textTransform: 'uppercase' }}>Add New Slide</span>
                 </div>
@@ -328,9 +306,9 @@ async function handleUpload(file: File, updateStateCallback: (url: string) => vo
                     />
                     {uploading === 'hero_new'
                       ? <div style={{ width: 16, height: 16, border: '2px solid #EDE9E6', borderTop: '2px solid #9B1C1C', borderRadius: '50%' }} className="spin" />
-                      : <UploadCloud size={18} color="#C4B8B2" />
+                      : <Plus size={18} color="#9B1C1C" />
                     }
-                    <span style={{ fontSize: 10, color: '#B0A8A4', fontWeight: 500, marginTop: 4 }}>
+                    <span style={{ fontSize: 10, color: '#1a1a1a', fontWeight: 600, marginTop: 4 }}>
                       {uploading === 'hero_new' ? 'Uploading…' : 'Upload Image File'}
                     </span>
                   </div>
@@ -347,10 +325,10 @@ async function handleUpload(file: File, updateStateCallback: (url: string) => vo
               <LayoutTemplate size={15} color="#9CA3AF" />
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 13, fontWeight: 600, color: '#1a1a1a' }}>Shop By Category</div>
-                <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 1 }}>6 fixed navigation slots</div>
+                <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 1 }}>Dynamic navigation carousel · Endless horizontal scrolling</div>
               </div>
               <div style={{ fontSize: 10, color: '#9CA3AF', background: '#F8F5F3', border: '1px solid #EDE9E6', padding: '3px 10px', borderRadius: 6, letterSpacing: '0.06em', fontWeight: 600 }}>
-                6 SLOTS
+                {config.shopByCategory.length} SLOTS
               </div>
             </div>
             <div style={{ ...sectionBodyStyle, display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
@@ -358,7 +336,12 @@ async function handleUpload(file: File, updateStateCallback: (url: string) => vo
                 <div key={i} className="slot-card" style={{ border: '1px solid #F0EBE8', borderRadius: 14, overflow: 'hidden', background: '#FDFCFB' }}>
                   <div style={{ padding: '10px 14px', background: '#F8F5F3', borderBottom: '1px solid #EDE9E6', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.18em', color: '#B0A8A4', textTransform: 'uppercase' }}>Slot {String(i + 1).padStart(2, '0')}</span>
-                    <div style={{ width: 6, height: 6, borderRadius: '50%', background: cat.img && cat.name ? '#10B981' : '#DDD8D4' }} />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <div style={{ width: 6, height: 6, borderRadius: '50%', background: cat.img && cat.name ? '#10B981' : '#DDD8D4' }} />
+                      <button onClick={() => removeCategory(i)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', opacity: 0.6, transition: 'opacity 0.2s' }} onMouseOver={e => e.currentTarget.style.opacity='1'} onMouseOut={e => e.currentTarget.style.opacity='0.6'}>
+                        <Trash2 size={13} color="#9B1C1C" />
+                      </button>
+                    </div>
                   </div>
                   <div style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
                     {cat.img ? (
@@ -366,7 +349,7 @@ async function handleUpload(file: File, updateStateCallback: (url: string) => vo
                         <img src={cat.img} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
                         <div className="img-overlay" style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)', opacity: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'opacity 0.2s' }}>
                           <button onClick={() => updateCategory(i, 'img', '')} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '6px 12px', background: '#fff', color: '#9B1C1C', border: 'none', borderRadius: 8, fontSize: 10, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
-                            <Trash2 size={11} /> Clear
+                            <Trash2 size={11} /> Clear Image
                           </button>
                         </div>
                       </div>
@@ -378,16 +361,22 @@ async function handleUpload(file: File, updateStateCallback: (url: string) => vo
                         <span style={{ fontSize: 10, color: '#B0A8A4', fontWeight: 500 }}>{uploading === `cat_${i}` ? 'Uploading…' : 'Add image'}</span>
                       </div>
                     )}
-                    <input className="sf-input" style={inputStyle} placeholder="Category name" value={cat.name}
-                      onChange={(e) => updateCategory(i, 'name', e.target.value)} />
+                    <input className="sf-input" style={inputStyle} placeholder="Category name" value={cat.name} onChange={(e) => updateCategory(i, 'name', e.target.value)} />
                     <div style={{ position: 'relative' }}>
-                      <input className="sf-input" style={{ ...inputStyle, paddingLeft: 30, fontFamily: 'monospace', fontSize: 11 }} placeholder="/collections/…" value={cat.href}
-                        onChange={(e) => updateCategory(i, 'href', e.target.value)} />
+                      <input className="sf-input" style={{ ...inputStyle, paddingLeft: 30, fontFamily: 'monospace', fontSize: 11 }} placeholder="/collections/…" value={cat.href} onChange={(e) => updateCategory(i, 'href', e.target.value)} />
                       <LinkIcon size={12} color="#C4B8B2" style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
                     </div>
                   </div>
                 </div>
               ))}
+
+              {/* Add New Category Slot */}
+              <div className="slot-card" onClick={addCategory} style={{ border: '1.5px dashed #D1D5DB', borderRadius: 14, background: '#FDFCFB', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 280, cursor: 'pointer' }}>
+                <div style={{ width: 44, height: 44, borderRadius: '50%', background: '#FEE2E2', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
+                  <Plus size={22} color="#9B1C1C" />
+                </div>
+                <span style={{ fontSize: 13, fontWeight: 700, color: '#1a1a1a' }}>Add Category Slot</span>
+              </div>
             </div>
           </div>
 
@@ -479,33 +468,23 @@ async function handleUpload(file: File, updateStateCallback: (url: string) => vo
               <LayoutTemplate size={15} color="#9CA3AF" />
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 13, fontWeight: 600, color: '#1a1a1a' }}>New Season Picks</div>
-                <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 1 }}>5-slot showcase · Slot 01 renders as double-height hero tile</div>
+                <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 1 }}>Dynamic showcase carousel · Endless horizontal scrolling</div>
               </div>
               <div style={{ fontSize: 10, color: '#9CA3AF', background: '#F8F5F3', border: '1px solid #EDE9E6', padding: '3px 10px', borderRadius: 6, letterSpacing: '0.06em', fontWeight: 600 }}>
-                5 SLOTS
+                {config.newSeason.length} SLOTS
               </div>
             </div>
 
-            {/* Info strip */}
-            <div style={{ margin: '0 28px', marginTop: 20, padding: '10px 14px', background: '#FFFBF0', border: '1px solid #FDE68A', borderRadius: 10, display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-              <Eye size={13} color="#D97706" style={{ marginTop: 1, flexShrink: 0 }} />
-              <span style={{ fontSize: 11, color: '#92400E', lineHeight: 1.6 }}>
-                <strong>Slot 01</strong> compiles as a double-height feature frame on desktop. Use your highest-quality editorial image here.
-              </span>
-            </div>
-
-            <div style={{ ...sectionBodyStyle, paddingTop: 16, display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+            <div style={{ ...sectionBodyStyle, display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
               {config.newSeason.map((item, i) => (
                 <div key={i} className="slot-card" style={{ border: '1px solid #F0EBE8', borderRadius: 14, overflow: 'hidden', background: '#FDFCFB' }}>
                   <div style={{ padding: '10px 14px', background: '#F8F5F3', borderBottom: '1px solid #EDE9E6', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.18em', color: '#B0A8A4', textTransform: 'uppercase' }}>
                       Season {String(i + 1).padStart(2, '0')}
                     </span>
-                    {i === 0 && (
-                      <span style={{ fontSize: 9, background: '#FEF2F2', color: '#9B1C1C', border: '1px solid #FECACA', padding: '2px 8px', borderRadius: 5, fontWeight: 700, letterSpacing: '0.06em' }}>
-                        HERO TILE
-                      </span>
-                    )}
+                    <button onClick={() => removeNewSeason(i)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', opacity: 0.6, transition: 'opacity 0.2s' }} onMouseOver={e => e.currentTarget.style.opacity='1'} onMouseOut={e => e.currentTarget.style.opacity='0.6'}>
+                      <Trash2 size={13} color="#9B1C1C" />
+                    </button>
                   </div>
                   <div style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
                     {item.img ? (
@@ -513,7 +492,7 @@ async function handleUpload(file: File, updateStateCallback: (url: string) => vo
                         <img src={item.img} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
                         <div className="img-overlay" style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)', opacity: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'opacity 0.2s' }}>
                           <button onClick={() => updateNewSeason(i, 'img', '')} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '6px 12px', background: '#fff', color: '#9B1C1C', border: 'none', borderRadius: 8, fontSize: 10, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
-                            <Trash2 size={11} /> Clear
+                            <Trash2 size={11} /> Clear Image
                           </button>
                         </div>
                       </div>
@@ -525,18 +504,23 @@ async function handleUpload(file: File, updateStateCallback: (url: string) => vo
                         <span style={{ fontSize: 10, color: '#B0A8A4', fontWeight: 500 }}>{uploading === `season_${i}` ? 'Uploading…' : 'Mount artwork'}</span>
                       </div>
                     )}
-                    <input className="sf-input" style={inputStyle} placeholder="Title (e.g. Anarkali Sets)" value={item.title}
-                      onChange={(e) => updateNewSeason(i, 'title', e.target.value)} />
-                    <input className="sf-input" style={{ ...inputStyle, color: '#6B7280' }} placeholder="Subtext (e.g. Timeless Elegance)" value={item.desc}
-                      onChange={(e) => updateNewSeason(i, 'desc', e.target.value)} />
+                    <input className="sf-input" style={inputStyle} placeholder="Title (e.g. Anarkali Sets)" value={item.title} onChange={(e) => updateNewSeason(i, 'title', e.target.value)} />
+                    <input className="sf-input" style={{ ...inputStyle, color: '#6B7280' }} placeholder="Subtext (e.g. Timeless Elegance)" value={item.desc} onChange={(e) => updateNewSeason(i, 'desc', e.target.value)} />
                     <div style={{ position: 'relative' }}>
-                      <input className="sf-input" style={{ ...inputStyle, paddingLeft: 30, fontFamily: 'monospace', fontSize: 11, color: '#6B7280' }} placeholder="/collections/…" value={item.href}
-                        onChange={(e) => updateNewSeason(i, 'href', e.target.value)} />
+                      <input className="sf-input" style={{ ...inputStyle, paddingLeft: 30, fontFamily: 'monospace', fontSize: 11, color: '#6B7280' }} placeholder="/collections/…" value={item.href} onChange={(e) => updateNewSeason(i, 'href', e.target.value)} />
                       <LinkIcon size={12} color="#C4B8B2" style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
                     </div>
                   </div>
                 </div>
               ))}
+
+              {/* Add New Season Slot */}
+              <div className="slot-card" onClick={addNewSeason} style={{ border: '1.5px dashed #D1D5DB', borderRadius: 14, background: '#FDFCFB', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 330, cursor: 'pointer' }}>
+                <div style={{ width: 44, height: 44, borderRadius: '50%', background: '#FEE2E2', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
+                  <Plus size={22} color="#9B1C1C" />
+                </div>
+                <span style={{ fontSize: 13, fontWeight: 700, color: '#1a1a1a' }}>Add Showcase Slot</span>
+              </div>
             </div>
           </div>
 
