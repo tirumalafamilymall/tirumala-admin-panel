@@ -372,6 +372,11 @@ async function handleZipUpload(file: File) {
         </div>
 
         <div className="ms-auto" style={{ display:'flex', gap:8 }}>
+
+          <button className="btn" style={{ background:'var(--cream-1)', border:'1px solid var(--border)' }} onClick={() => window.location.href='/coupons'}>
+            🎟️ Manage Coupons
+          </button>
+
           <button className="btn btn-primary" onClick={() => { setForm(emptyForm); setEditItem(null); setFormErrors({}); setAddOpen(true) }}>
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 1v10M1 6h10"/></svg>
             Add Product

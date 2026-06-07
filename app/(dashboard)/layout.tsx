@@ -53,6 +53,12 @@ const NAV = [
     chip: null,
     icon: <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="1" y="3" width="14" height="10" rx="1.5"/><path d="M1 7h14M5 7v6"/></svg> 
   },
+  { 
+    href: '/coupons',
+    label: 'Coupons',
+    chip: null,
+    icon: <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M2 5a2 2 0 012-2h8a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V5zm0 3h12M5 11h.01"/></svg> 
+  },
 ]
 
 const PAGE_TITLES: Record<string, string> = {
@@ -63,6 +69,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/users':      'Users',
   '/insta-live': 'Insta Live',
   '/storefront': 'Storefront Editor',
+  '/coupons':    'Discount Coupons', 
 }
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
