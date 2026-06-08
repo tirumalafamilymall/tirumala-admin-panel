@@ -70,17 +70,13 @@ export const deleteProduct = (id: string) =>
 export const uploadExcel = async (file: File) => {
   const form = new FormData()
   form.append('file', file)
-  const token = getAdminToken()
-  const res = await fetch(`${API_BASE}/api/admin/products/excel`, {
+  
+  // adminFetch automatically handles the 401 retry, throws errors if it fails, 
+  // AND parses the JSON for you!
+  return adminFetch('/api/admin/products/excel', {
     method: 'POST',
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
     body: form,
   })
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}))
-    throw new Error(err.error || 'Excel upload failed')
-  }
-  return res.json()
 }
 
 /* ================== ORDERS & SHIPPING ================== */

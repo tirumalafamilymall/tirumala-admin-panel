@@ -662,7 +662,7 @@ async function handleZipUpload(file: File) {
         <div style={{ marginBottom:14, padding:'10px 14px', background:'var(--cream-2)', borderRadius:8, fontSize:12.5, color:'var(--ink-3)', lineHeight:1.7 }}>
           <strong>How it works:</strong><br />
           1. Create a ZIP containing your product images <strong>(Max 150MB limit)</strong><br />
-          2. Name each image after its <strong>Product Code</strong> — e.g. <code style={{ background:'#fff', padding:'1px 5px', borderRadius:3 }}>TFM-001.jpg</code><br />
+          2. Name each image after its <strong>Product Code</strong> — e.g. <code style={{ background:'#fff', padding:'1px 5px', borderRadius:3 }}>TFM001.jpg</code><br />
           3. Upload the ZIP — images are matched, uploaded to cloud storage, and saved automatically
         </div>
 
