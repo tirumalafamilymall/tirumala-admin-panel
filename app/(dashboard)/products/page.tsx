@@ -335,9 +335,12 @@ async function handleZipUpload(file: File) {
     if (togglingId === p.id) return
     setTogglingId(p.id)
     try {
-      await updateProduct(p.id, { is_active: !p.is_active })
-      setProducts(ps => ps.map(x => x.id === p.id ? { ...x, is_active: !x.is_active } : x))
-      toast('Status updated', 'success')
+      await updateProduct(p.id, { 
+        is_active: !p.is_active,
+        variant_id: p.variant_id // Must include this!
+      })
+      setProducts(ps => ps.map(x => x.variant_id === p.variant_id ? { ...x, is_active: !x.is_active } : x))
+      toast('Variant status updated', 'success')
     } catch (e: any) { 
       toast(e?.message || 'Failed', 'error') 
     } finally {
