@@ -64,8 +64,10 @@ export const createProduct = (data: any) =>
 export const updateProduct = (id: string, data: any) => 
   adminFetch(`/api/admin/products/${id}`, { method: 'PATCH', body: JSON.stringify(data) })
 
-export const deleteProduct = (id: string) => 
-  adminFetch(`/api/admin/products/${id}`, { method: 'DELETE' })
+export const deleteProduct = (id: string, variantId?: string) => {
+  const url = variantId ? `/api/admin/products/${id}?variant_id=${variantId}` : `/api/admin/products/${id}`
+  return adminFetch(url, { method: 'DELETE' })
+}
 
 export const uploadExcel = async (file: File) => {
   const form = new FormData()
@@ -170,3 +172,10 @@ export const uploadToSpaces = async (file: File): Promise<string> => {
 export const searchProductsForLink = (query: string) => 
   adminFetch(`/api/admin/products?search=${encodeURIComponent(query)}&limit=10&sales_channel=INSTA_LIVE`)
 
+
+/* ================== POS SCANNER ================== */
+export const scanBarcode = (barcode: string) => 
+  adminFetch('/api/admin/pos/scan', { 
+    method: 'POST', 
+    body: JSON.stringify({ barcode }) 
+  })

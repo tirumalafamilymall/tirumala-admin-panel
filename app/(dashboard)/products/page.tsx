@@ -181,7 +181,7 @@ export default function ProductsPage() {
     if (!deleteItem || deleting) return
     setDeleting(true)
     try {
-      await deleteProduct(deleteItem.id)
+      await deleteProduct(deleteItem.id, deleteItem.variant_id)
       toast('Product deleted', 'success')
       setDeleteItem(null)
       loadProducts()
