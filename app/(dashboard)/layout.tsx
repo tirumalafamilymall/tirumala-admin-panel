@@ -59,6 +59,12 @@ const NAV = [
     chip: null,
     icon: <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M2 5a2 2 0 012-2h8a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V5zm0 3h12M5 11h.01"/></svg> 
   },
+  { 
+    href: '/pos', 
+    label: 'Point of Sale', 
+    chip: null,
+    icon: <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M2 3h1v10H2V3zm2 0h2v10H4V3zm3 0h1v10H7V3zm2 0h1v10H9V3zm3 0h2v10h-2V3z"/></svg> 
+  },
 ]
 
 const PAGE_TITLES: Record<string, string> = {
@@ -70,6 +76,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/insta-live': 'Insta Live',
   '/storefront': 'Storefront Editor',
   '/coupons':    'Discount Coupons', 
+  '/pos':        'Store POS Scanner',
 }
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
