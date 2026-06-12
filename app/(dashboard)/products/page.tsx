@@ -141,7 +141,7 @@ export default function ProductsPage() {
     }
   }
 
-  async function handleSave() {
+async function handleSave() {
     if (!validate()) return
     setSaving(true)
     try {
@@ -152,17 +152,49 @@ export default function ProductsPage() {
         stock: +form.stock || 0 
       }
       
-      if (editItem) {
+if (editItem) {
+        // 1. Capture the fresh data sent back from your perfect PATCH route
         await updateProduct(editItem.id, body) 
+        
+        // 2. INSTANTLY update the React state (Fully Type-Safe!)
+        setProducts(currentProducts => 
+          currentProducts.map(p => 
+            p.variant_id === editItem.variant_id 
+              ? { 
+                  ...p, 
+                  name: form.name,
+                  department: form.department,
+                  category: form.category,
+                  subcategory: form.subcategory,
+                  brand: form.brand,
+                  base_price: +form.price,
+                  stock: +form.stock || 0,
+                  color: form.color,
+                  size: form.size,
+                  barcode: form.barcode,
+                  sales_channel: form.sales_channel,
+                  is_active: form.is_active,
+                  images: form.images,
+                  image: form.images?.[0] || undefined // 🔥 undefined instead of null fixes the image TS error!
+                }
+              : p
+          )
+        )
         toast('Product updated', 'success')
       } else {
         await createProduct(body)
         toast('Product added', 'success')
       }
+      
       setAddOpen(false); setEditItem(null); setForm(emptyForm)
-      loadProducts()
-    } catch (e: any) { toast(e.message || 'Save failed', 'error') }
-    setSaving(false)
+      
+      // 3. We still call this, but the user doesn't have to wait for it anymore
+      loadProducts() 
+    } catch (e: any) { 
+      toast(e.message || 'Save failed', 'error') 
+    } finally {
+      setSaving(false)
+    }
   }
 
   function openEdit(p: Product) {
