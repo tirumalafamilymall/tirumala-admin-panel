@@ -149,7 +149,9 @@ async function handleSave() {
         ...form, 
         variant_id: editItem?.variant_id,
         base_price: +form.price, 
-        stock: +form.stock || 0 
+        stock: +form.stock || 0 ,
+
+        image: form.images?.[0] || null
       }
       
 if (editItem) {
