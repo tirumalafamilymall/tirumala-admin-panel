@@ -4,7 +4,8 @@ import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { getOrder } from '@/lib/api'
 import { Badge, toast } from '@/components/admin/ui'
-import { Loader2, ExternalLink, Package, User, CreditCard, MapPin, Truck } from 'lucide-react'
+// 🔥 1. Added Printer to the imports
+import { Loader2, ExternalLink, Package, User, CreditCard, MapPin, Truck, Printer } from 'lucide-react' 
 
 export default function OrderDetailPage() {
   const params  = useParams()
@@ -12,6 +13,8 @@ export default function OrderDetailPage() {
 
   const [order,   setOrder]   = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  // 🔥 2. Added a loading state specifically for the buttons
+  const [actionLoading, setActionLoading] = useState(false)
 
   useEffect(() => {
     getOrder(orderId)
@@ -19,6 +22,74 @@ export default function OrderDetailPage() {
       .catch(() => toast('Failed to load order', 'error'))
       .finally(() => setLoading(false))
   }, [orderId])
+
+// 🔥 Updated: Now automatically handles the complete 2-Step Shiprocket Pipeline
+  async function handleAssignShipping() {
+    setActionLoading(true)
+    try {
+      let shipmentId = order.shiprocket_order_id;
+
+      // STEP 1: If Shiprocket doesn't know about this order yet, push it to their servers!
+      if (!shipmentId) {
+        toast('Syncing order with Shiprocket...', 'info')
+        const createRes = await fetch('/api/shipping/create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ order_id: order.id })
+        })
+        const createData = await createRes.json()
+        if (!createRes.ok) throw new Error(createData.error || 'Shiprocket sync failed')
+        
+        // Grab the brand new ID returned from Shiprocket
+        shipmentId = createData.order?.shiprocket_order_id || createData.shipment_id || createData.order_id
+        
+        if (!shipmentId) throw new Error("Shiprocket synced successfully, but returned no tracking ID.")
+      }
+
+      // STEP 2: Now that we have the ID, assign the AWB barcode and schedule pickup
+      toast('Allocating Courier & AWB...', 'info')
+      const awbRes = await fetch('/api/admin/shipping/awb', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          order_id: order.id,
+          shipment_id: shipmentId 
+        }),
+      })
+      const awbData = await awbRes.json()
+      if (!awbRes.ok) throw new Error(awbData.error || 'Failed to assign AWB')
+      
+      // Update the UI with the final tracking info!
+      setOrder(awbData.order)
+      toast('AWB allocated and pickup scheduled!', 'success')
+      
+    } catch (e: any) {
+      toast(e.message, 'error')
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
+  // 🔥 4. Added the function to print the label
+  async function handlePrintLabel() {
+    setActionLoading(true)
+    try {
+      const res = await fetch('/api/admin/shipping/label', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ shipment_id: order.shiprocket_order_id }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to get label')
+
+      if (data.label?.label_url) window.open(data.label.label_url, '_blank')
+      if (data.manifest?.manifest_url) window.open(data.manifest.manifest_url, '_blank')
+    } catch (e: any) {
+      toast(e.message, 'error')
+    } finally {
+      setActionLoading(false)
+    }
+  }
 
   if (loading) return (
     <div style={{ display:'flex', justifyContent:'center', padding:100 }}>
@@ -77,13 +148,11 @@ export default function OrderDetailPage() {
             <div className="tbl-wrap">
               <table>
                 <thead><tr><th>Product</th><th>SKU</th><th>Qty</th><th>Price</th><th style={{ textAlign: 'right' }}>Total</th></tr></thead>
-
-<tbody>
+                <tbody>
                   {(order.items ?? []).map((item: any, i: number) => (
                     <tr key={i}>
                       <td>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                          {/* 🔥 1. Added Thumbnail for visual packing confirmation */}
                           {item.image ? (
                             <img src={item.image} alt={item.name} style={{ width: 44, height: 44, objectFit: 'cover', borderRadius: 6, border: '1px solid var(--border)' }} />
                           ) : (
@@ -93,7 +162,6 @@ export default function OrderDetailPage() {
                           <div>
                             <div style={{ fontWeight:600, fontSize:13, lineHeight: 1.2 }}>{item.name}</div>
                             
-                            {/* 🔥 2. Added Size and Color badges for the packing team */}
                             <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
                               {item.size && (
                                 <span style={{ fontSize: 10, background: 'var(--cream-1)', padding: '2px 6px', borderRadius: 4, border: '1px solid var(--border)', fontWeight: 700, color: '#BE185D' }}>
@@ -116,25 +184,61 @@ export default function OrderDetailPage() {
                     </tr>
                   ))}
                 </tbody>
-
               </table>
             </div>
           </div>
 
-          {/* Simplified Read-Only Summary */}
+          {/* 🔥 5. Replaced the Read-Only Summary with the Interactive Logistics Console */}
           <div className="detail-card">
-            <div className="card-title" style={{ display:'flex', alignItems:'center', gap:8 }}><Truck size={16}/> Fulfillment Summary</div>
-            <div className="detail-row"><span className="detail-lbl">Current Status</span><Badge status={order.status} /></div>
-            <div className="detail-row"><span className="detail-lbl">Tracking ID</span><span style={{ fontFamily:'monospace' }}>{order.awb_code ?? 'Not yet shipped'}</span></div>
-            {order.tracking_url && (
-              <a href={order.tracking_url} target="_blank" className="btn btn-sm" style={{ marginTop: 10, width: '100%', justifyContent: 'center' }}>
-                Track Shipment <ExternalLink size={12} />
-              </a>
+            <div className="card-title" style={{ display:'flex', alignItems:'center', gap:8, marginBottom: 16 }}>
+              <Truck size={16}/> Fulfillment & Shipping
+            </div>
+            
+            {order.status !== 'SHIPPED' && order.status !== 'DELIVERED' ? (
+              <div>
+                <p style={{ fontSize: 13, color: 'var(--ink-4)', marginBottom: 16 }}>
+                  Ready to pack items. Click below to generate the barcode details for the Shiprocket pick-up driver.
+                </p>
+                <button 
+                  className="btn" 
+                  style={{ width: '100%', justifyContent: 'center' }} 
+                  onClick={handleAssignShipping} 
+                  disabled={actionLoading}
+                >
+                  {actionLoading ? <Loader2 size={16} className="animate-spin" /> : <Truck size={16} />}
+                  {actionLoading ? ' Processing...' : ' Assign Courier & Schedule Pickup'}
+                </button>
+              </div>
+            ) : (
+              <div>
+                <div style={{ background: 'var(--cream-2)', padding: 12, borderRadius: 6, marginBottom: 16 }}>
+                  <div style={{ fontSize: 12, color: 'var(--ink-4)' }}>AWB / Tracking Code</div>
+                  <div style={{ fontFamily: 'monospace', fontWeight: 600, fontSize: 16, color: 'var(--ink-1)' }}>
+                    {order.awb_code || 'Allocated'}
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: 10, flexDirection: 'column' }}>
+                  <button 
+                    className="btn" 
+                    style={{ width: '100%', justifyContent: 'center', background: 'var(--ink-1)', color: 'white' }} 
+                    onClick={handlePrintLabel} 
+                    disabled={actionLoading}
+                  >
+                    {actionLoading ? <Loader2 size={16} className="animate-spin" /> : <Printer size={16} />}
+                    {actionLoading ? ' Fetching Label...' : ' Print Shipping Label'}
+                  </button>
+
+                  {order.tracking_url && (
+                    <a href={order.tracking_url} target="_blank" className="btn btn-outline" style={{ width: '100%', justifyContent: 'center' }}>
+                      Track Shipment <ExternalLink size={12} style={{ marginLeft: 6 }} />
+                    </a>
+                  )}
+                </div>
+              </div>
             )}
-            <p style={{ fontSize: 11, color: 'var(--ink-5)', marginTop: 15, fontStyle: 'italic' }}>
-              Automation is active. Order updates automatically via Shiprocket.
-            </p>
           </div>
+          
         </div>
       </div>
     </>
