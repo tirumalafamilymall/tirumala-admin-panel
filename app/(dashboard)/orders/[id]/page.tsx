@@ -2,10 +2,10 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
-import { getOrder } from '@/lib/api'
 import { Badge, toast } from '@/components/admin/ui'
 // 🔥 1. Added Printer to the imports
 import { Loader2, ExternalLink, Package, User, CreditCard, MapPin, Truck, Printer } from 'lucide-react' 
+import { getOrder, createShipment, generateAWB, getLabel, schedulePickup } from '@/lib/api'
 
 export default function OrderDetailPage() {
   const params  = useParams()
@@ -23,68 +23,39 @@ export default function OrderDetailPage() {
       .finally(() => setLoading(false))
   }, [orderId])
 
-// 🔥 Updated: Now automatically handles the complete 2-Step Shiprocket Pipeline
-  async function handleAssignShipping() {
+async function handleAssignShipping() {
     setActionLoading(true)
     try {
       let shipmentId = order.shiprocket_order_id;
 
-      // STEP 1: If Shiprocket doesn't know about this order yet, push it to their servers!
+      // STEP 1: Sync if ID is missing
       if (!shipmentId) {
-        toast('Syncing order with Shiprocket...', 'info')
-// Inside handleAssignShipping function:
-const createRes = await fetch('/api/shipping/create', { // Ensure this URL is correct
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ order_id: order.id })
-})
-        const createData = await createRes.json()
-        if (!createRes.ok) throw new Error(createData.error || 'Shiprocket sync failed')
-        
-        // Grab the brand new ID returned from Shiprocket
-        shipmentId = createData.order?.shiprocket_order_id || createData.shipment_id || createData.order_id
-        
-        if (!shipmentId) throw new Error("Shiprocket synced successfully, but returned no tracking ID.")
+        toast('Syncing with Shiprocket...', 'info')
+        const res = await createShipment(order.id)
+        shipmentId = res.shiprocket?.shipment_id || res.shiprocket?.order_id
       }
 
-      // STEP 2: Now that we have the ID, assign the AWB barcode and schedule pickup
-      toast('Allocating Courier & AWB...', 'info')
-      const awbRes = await fetch('/api/admin/shipping/awb', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          order_id: order.id,
-          shipment_id: shipmentId 
-        }),
-      })
-      const awbData = await awbRes.json()
-      if (!awbRes.ok) throw new Error(awbData.error || 'Failed to assign AWB')
+      // STEP 2: Generate AWB & Schedule
+      toast('Allocating Courier...', 'info')
+      await generateAWB(order.id, shipmentId)
+      await schedulePickup(order.id, shipmentId)
       
-      // Update the UI with the final tracking info!
-      setOrder(awbData.order)
+      // Refresh order data
+      const updatedOrder = await getOrder(orderId)
+      setOrder(updatedOrder.order ?? updatedOrder)
       toast('AWB allocated and pickup scheduled!', 'success')
-      
     } catch (e: any) {
       toast(e.message, 'error')
     } finally {
       setActionLoading(false)
     }
   }
-
-  // 🔥 4. Added the function to print the label
-  async function handlePrintLabel() {
+async function handlePrintLabel() {
     setActionLoading(true)
     try {
-      const res = await fetch('/api/admin/shipping/label', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ shipment_id: order.shiprocket_order_id }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Failed to get label')
-
-      if (data.label?.label_url) window.open(data.label.label_url, '_blank')
-      if (data.manifest?.manifest_url) window.open(data.manifest.manifest_url, '_blank')
+      const res = await getLabel(order.shiprocket_order_id)
+      if (res.label?.label_url) window.open(res.label.label_url, '_blank')
+      if (res.manifest?.manifest_url) window.open(res.manifest.manifest_url, '_blank')
     } catch (e: any) {
       toast(e.message, 'error')
     } finally {
