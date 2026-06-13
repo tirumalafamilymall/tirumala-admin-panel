@@ -77,17 +77,46 @@ export default function OrderDetailPage() {
             <div className="tbl-wrap">
               <table>
                 <thead><tr><th>Product</th><th>SKU</th><th>Qty</th><th>Price</th><th style={{ textAlign: 'right' }}>Total</th></tr></thead>
-                <tbody>
+
+<tbody>
                   {(order.items ?? []).map((item: any, i: number) => (
                     <tr key={i}>
-                      <td><div style={{ fontWeight:600, fontSize:13 }}>{item.name}</div></td>
-                      <td><div style={{ fontFamily:'monospace', fontSize:11 }}>{item.product_code}</div></td>
-                      <td style={{ textAlign:'center' }}>{item.quantity}</td>
+                      <td>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                          {/* 🔥 1. Added Thumbnail for visual packing confirmation */}
+                          {item.image ? (
+                            <img src={item.image} alt={item.name} style={{ width: 44, height: 44, objectFit: 'cover', borderRadius: 6, border: '1px solid var(--border)' }} />
+                          ) : (
+                            <div style={{ width: 44, height: 44, background: 'var(--cream-2)', borderRadius: 6, border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: 'var(--ink-4)', textAlign: 'center' }}>No Img</div>
+                          )}
+                          
+                          <div>
+                            <div style={{ fontWeight:600, fontSize:13, lineHeight: 1.2 }}>{item.name}</div>
+                            
+                            {/* 🔥 2. Added Size and Color badges for the packing team */}
+                            <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
+                              {item.size && (
+                                <span style={{ fontSize: 10, background: 'var(--cream-1)', padding: '2px 6px', borderRadius: 4, border: '1px solid var(--border)', fontWeight: 700, color: '#BE185D' }}>
+                                  Size: {item.size}
+                                </span>
+                              )}
+                              {item.color && (
+                                <span style={{ fontSize: 10, background: 'var(--cream-1)', padding: '2px 6px', borderRadius: 4, border: '1px solid var(--border)', fontWeight: 700, color: '#0369A1' }}>
+                                  Color: {item.color}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                      <td><div style={{ fontFamily:'monospace', fontSize:11, color: 'var(--ink-3)' }}>{item.product_code}</div></td>
+                      <td style={{ textAlign:'center', fontWeight: 700, fontSize: 14 }}>{item.quantity}</td>
                       <td>₹{Number(item.price).toLocaleString('en-IN')}</td>
                       <td style={{ textAlign: 'right', fontWeight:700 }}>₹{(Number(item.price) * item.quantity).toLocaleString('en-IN')}</td>
                     </tr>
                   ))}
                 </tbody>
+
               </table>
             </div>
           </div>
