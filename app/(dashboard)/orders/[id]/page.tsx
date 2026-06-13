@@ -26,16 +26,15 @@ export default function OrderDetailPage() {
 async function handleAssignShipping() {
     setActionLoading(true)
     try {
+      // Step 1: Sync order to Shiprocket if it doesn't have an ID
       let shipmentId = order.shiprocket_order_id;
-
-      // STEP 1: Sync if ID is missing
       if (!shipmentId) {
         toast('Syncing with Shiprocket...', 'info')
         const res = await createShipment(order.id)
         shipmentId = res.shiprocket?.shipment_id || res.shiprocket?.order_id
       }
 
-      // STEP 2: Generate AWB & Schedule
+      // Step 2: Assign courier and schedule pickup
       toast('Allocating Courier...', 'info')
       await generateAWB(order.id, shipmentId)
       await schedulePickup(order.id, shipmentId)
@@ -50,6 +49,7 @@ async function handleAssignShipping() {
       setActionLoading(false)
     }
   }
+
 async function handlePrintLabel() {
     setActionLoading(true)
     try {
