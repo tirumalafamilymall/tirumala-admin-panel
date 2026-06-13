@@ -32,11 +32,12 @@ export default function OrderDetailPage() {
       // STEP 1: If Shiprocket doesn't know about this order yet, push it to their servers!
       if (!shipmentId) {
         toast('Syncing order with Shiprocket...', 'info')
-        const createRes = await fetch('/api/shipping/create', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ order_id: order.id })
-        })
+// Inside handleAssignShipping function:
+const createRes = await fetch('/api/shipping/create', { // Ensure this URL is correct
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ order_id: order.id })
+})
         const createData = await createRes.json()
         if (!createRes.ok) throw new Error(createData.error || 'Shiprocket sync failed')
         
