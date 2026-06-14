@@ -206,7 +206,7 @@ if (editItem) {
       brand: p.brand || '', price: String(p.base_price), stock: String(p.stock),
       color: p.color || '', size: p.size || '', barcode: p.barcode || '', is_active: p.is_active,
       sales_channel: p.sales_channel || 'MAIN_STORE', 
-      images: p.images || []
+      images: p.image ? [p.image] : []
     })
     setEditItem(p); setAddOpen(true)
   }
