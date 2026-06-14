@@ -193,7 +193,7 @@ async function handlePrintLabel() {
                 <div style={{ display: 'flex', gap: 10, flexDirection: 'column' }}>
                   <button 
                     className="btn" 
-                    style={{ width: '100%', justifyContent: 'center', background: 'var(--ink-1)', color: 'white' }} 
+                    style={{ width: '100%', justifyContent: 'center', background: '#1a1a1a', color: '#ffffff' }}
                     onClick={handlePrintLabel} 
                     disabled={actionLoading}
                   >
