@@ -12,7 +12,7 @@ export default function ShippingPage() {
   const [loading, setLoading] = useState(true)
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
-  const [statusFilter, setStatusFilter] = useState('CONFIRMED')
+  const [statusFilter, setStatusFilter] = useState('')
 
   const PER_PAGE = 20
 
