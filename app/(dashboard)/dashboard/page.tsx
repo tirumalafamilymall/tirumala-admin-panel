@@ -69,7 +69,7 @@ export default function DashboardPage() {
               {/* CORRECT PATH: data.stats.recent_orders */}
               {loading ? <SkeletonRows cols={5} /> : (data?.stats?.recent_orders ?? []).map((o: any) => (
                 <tr key={o.id}>
-                  <td><Link href={`/admin/orders/${o.id}`} className="ord-id">{o.order_number}</Link></td>
+                  <td><Link href={`/orders/${o.id}`} className="ord-id">{o.order_number}</Link></td>
                   <td style={{ fontWeight: 500 }}>{o.user?.name ?? '—'}</td>
                   <td style={{ fontWeight: 700 }}>₹{Number(o.total_amount).toLocaleString('en-IN')}</td>
                   <td><Badge status={o.payment_status} /></td>

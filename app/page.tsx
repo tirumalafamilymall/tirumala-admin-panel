@@ -1,13 +1,12 @@
-import './globals.css'
+'use client'
+import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { getAdminToken } from '@/lib/auth'
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
-  return (
-    <html lang="en">
-      <body>{children}</body>
-    </html>
-  )
+export default function RootPage() {
+  const router = useRouter()
+  useEffect(() => {
+    router.replace(getAdminToken() ? '/dashboard' : '/login')
+  }, [])
+  return null
 }

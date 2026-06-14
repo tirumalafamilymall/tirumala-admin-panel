@@ -89,20 +89,20 @@ export default function POSScannerPage() {
     try {
       const res = await scanBarcode(cleanBarcode)
       
-      playSound(res.item.warning ? 'error' : 'success')
+      playSound(res.warning ? 'error' : 'success')
       
-      setLog(prev => [{
-        id: Math.random().toString(),
-        time: timestamp,
-        name: res.item.name,
-        price: res.item.price,
-        color: res.item.color,
-        size: res.item.size,
-        new_stock: res.item.new_stock,
-        warning: res.item.warning,
-        status: 'SUCCESS' as const, // 🔥 FIX: Added 'as const' here
-        raw_barcode: cleanBarcode
-      }, ...prev].slice(0, 50)) // Keep only the last 50 items
+setLog(prev => [{
+  id: Math.random().toString(),
+  time: timestamp,
+  name: res.variant?.product?.name || res.variant?.sku || cleanBarcode,
+  price: Number(res.variant?.base_price || 0),
+  color: res.variant?.color || null,
+  size: res.variant?.size || null,
+  new_stock: res.variant?.stock ?? 0,
+  warning: res.warning || null,
+  status: 'SUCCESS' as const,
+  raw_barcode: cleanBarcode
+}, ...prev].slice(0, 50))
 
     } catch (error: any) {
       playSound('error')

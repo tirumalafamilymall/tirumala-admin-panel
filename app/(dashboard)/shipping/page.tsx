@@ -2,9 +2,9 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
+import { Download, ExternalLink, Check } from 'lucide-react'
 import { getOrders, getLabel } from '@/lib/api'
 import { Badge, SkeletonRows, Pagination, toast } from '@/components/admin/ui'
-import { Download, ExternalLink, Check } from 'lucide-react'
 
 export default function ShippingPage() {
   const [orders, setOrders] = useState<any[]>([])
@@ -41,31 +41,18 @@ export default function ShippingPage() {
     return () => clearTimeout(t)
   }, [search])
 
-  async function handleDownloadLabel(order: any) {
-    const toastId = toast('Fetching label from Shiprocket...', 'info')
-    try {
-      // Intelligently grabs whichever ID exists
-      const targetId = order.shiprocket_shipment_id || order.shiprocket_order_id;
-      if (!targetId) throw new Error("No valid Shiprocket ID found.");
-
-      const res = await fetch('/api/admin/shipping/label', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ shipment_id: targetId }),
-      })
-      const data = await res.json()
-      
-      if (!res.ok) throw new Error(data.error || 'Failed to fetch PDF documents')
-
-      // Opens the PDFs safely in new tabs
-      if (data.label?.label_url) window.open(data.label.label_url, '_blank')
-      if (data.manifest?.manifest_url) window.open(data.manifest.manifest_url, '_blank')
-      
-      toast('Labels opened in new tabs!', 'success')
-    } catch (e: any) {
-      toast(e.message || 'Failed to download label', 'error')
-    }
+async function handleDownloadLabel(order: any) {
+  try {
+    const targetId = order.shiprocket_order_id
+    if (!targetId) throw new Error('No Shiprocket ID found.')
+    const res = await getLabel(targetId)
+    if (res.label?.label_url) window.open(res.label.label_url, '_blank')
+    if (res.manifest?.manifest_url) window.open(res.manifest.manifest_url, '_blank')
+    toast('Labels opened!', 'success')
+  } catch (e: any) {
+    toast(e.message || 'Failed to download label', 'error')
   }
+}
 
   return (
     <>
@@ -130,6 +117,13 @@ export default function ShippingPage() {
             </tbody>
           </table>
         </div>
+                  <Pagination
+  page={page}
+  total={Math.ceil(total / PER_PAGE)}
+  perPage={PER_PAGE}
+  totalItems={total}
+  onChange={setPage}
+/>
       </div>
     </>
   )
