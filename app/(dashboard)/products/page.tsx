@@ -27,8 +27,12 @@ type Product = {
 }
 
 type ExcelResult = {
-  created?: number; updated?: number; failed?: number
-  parseErrors?: number; failedRows?: { row: number; reason: string }[]
+  created?: number
+  updated?: number
+  failed?: number
+  parseErrors?: number
+  failedRows?: { product_code: string; error: string }[]
+  parseErrorList?: string[]
 }
 
 type ZipResult = {
@@ -227,28 +231,37 @@ if (editItem) {
   }
 
 async function handleExcelFile(file: File) {
-    setExcelLoading(true) 
-    setExcelResult(null)
+  setExcelLoading(true) 
+  setExcelResult(null)
+  
+  try {
+    const res = await uploadExcel(file)
     
-    try {
-      const res = await uploadExcel(file)
-      
-      const mappedResult = {
-        created: res.summary?.created || 0, 
-        updated: res.summary?.updated || 0, 
-        failed: res.summary?.failed || 0,
-        parseErrors: res.summary?.parse_errors || 0
-      }
-      
-      setExcelResult(mappedResult)
-      toast(`Created ${mappedResult.created} & Updated ${mappedResult.updated} products`, 'success')
-      loadProducts()
-    } catch (e: any) { 
-      toast(e?.message || 'Upload failed', 'error') 
-    } finally {
-      setExcelLoading(false) 
+    const mappedResult = {
+      created:       res.summary?.created || 0, 
+      updated:       res.summary?.updated || 0, 
+      failed:        res.summary?.failed || 0,
+      parseErrors:   res.summary?.parse_errors || 0,
+      failedRows:    res.failed_rows || [],
+      parseErrorList: res.parse_errors || []
     }
+    
+    setExcelResult(mappedResult)
+    
+    if (mappedResult.created === 0 && mappedResult.updated === 0 && mappedResult.parseErrors === 0 && mappedResult.failed === 0) {
+      toast('Nothing was processed. Check your file format.', 'error')
+    } else if (mappedResult.created === 0 && mappedResult.updated === 0) {
+      toast(`Nothing created or updated. Parse Errors: ${mappedResult.parseErrors}, Failed: ${mappedResult.failed}`, 'error')
+    } else {
+      toast(`Created ${mappedResult.created} & Updated ${mappedResult.updated} products`, 'success')
+    }
+    loadProducts()
+  } catch (e: any) { 
+    toast(e?.message || 'Upload failed', 'error') 
+  } finally {
+    setExcelLoading(false) 
   }
+}
 
 async function handleZipUpload(file: File) {
     if (file.size > 150 * 1024 * 1024) {
@@ -680,16 +693,48 @@ async function handleZipUpload(file: File) {
           <UploadZone label="Drag & drop your file here" subLabel="Accepts .xlsx · .xls · .csv" onFile={handleExcelFile} />
         )}
         
-        {excelResult && (
-          <div style={{ marginTop:16 }}>
-            <div className="excel-result-grid">
-              <div className="excel-result-box" style={{ background:'#DCFCE7' }}><div className="excel-result-val" style={{ color:'#14532D' }}>{excelResult.created ?? 0}</div><div className="excel-result-lbl">✓ Created</div></div>
-              <div className="excel-result-box" style={{ background:'#DBEAFE' }}><div className="excel-result-val" style={{ color:'#1E3A8A' }}>{excelResult.updated ?? 0}</div><div className="excel-result-lbl">↻ Updated</div></div>
-              <div className="excel-result-box" style={{ background:'#FEE2E2' }}><div className="excel-result-val" style={{ color:'#7F1D1D' }}>{excelResult.failed ?? 0}</div><div className="excel-result-lbl">✕ Failed</div></div>
-              <div className="excel-result-box" style={{ background:'#FFF7ED' }}><div className="excel-result-val" style={{ color:'#7C2D12' }}>{excelResult.parseErrors ?? 0}</div><div className="excel-result-lbl">⚠ Parse Errors</div></div>
-            </div>
-          </div>
-        )}
+{excelResult && (
+  <div style={{ marginTop:16 }}>
+    <div className="excel-result-grid">
+      <div className="excel-result-box" style={{ background:'#DCFCE7' }}>
+        <div className="excel-result-val" style={{ color:'#14532D' }}>{excelResult.created ?? 0}</div>
+        <div className="excel-result-lbl">✓ Created</div>
+      </div>
+      <div className="excel-result-box" style={{ background:'#DBEAFE' }}>
+        <div className="excel-result-val" style={{ color:'#1E3A8A' }}>{excelResult.updated ?? 0}</div>
+        <div className="excel-result-lbl">↻ Updated</div>
+      </div>
+      <div className="excel-result-box" style={{ background:'#FEE2E2' }}>
+        <div className="excel-result-val" style={{ color:'#7F1D1D' }}>{excelResult.failed ?? 0}</div>
+        <div className="excel-result-lbl">✕ Failed</div>
+      </div>
+      <div className="excel-result-box" style={{ background:'#FFF7ED' }}>
+        <div className="excel-result-val" style={{ color:'#7C2D12' }}>{excelResult.parseErrors ?? 0}</div>
+        <div className="excel-result-lbl">⚠ Parse Errors</div>
+      </div>
+    </div>
+
+    {excelResult.parseErrorList && excelResult.parseErrorList.length > 0 && (
+      <div style={{ marginTop: 12, padding: 12, background: '#FEF2F2', borderRadius: 8, border: '1px solid #FECACA' }}>
+        <p style={{ fontWeight: 600, color: '#991B1B', marginBottom: 8, fontSize: 13 }}>⚠ Parse Errors:</p>
+        {excelResult.parseErrorList.map((e, i) => (
+          <p key={i} style={{ fontSize: 12, color: '#991B1B', marginBottom: 4 }}>{e}</p>
+        ))}
+      </div>
+    )}
+
+    {excelResult.failedRows && excelResult.failedRows.length > 0 && (
+      <div style={{ marginTop: 12, padding: 12, background: '#FEF2F2', borderRadius: 8, border: '1px solid #FECACA' }}>
+        <p style={{ fontWeight: 600, color: '#991B1B', marginBottom: 8, fontSize: 13 }}>✕ Failed Rows:</p>
+        {excelResult.failedRows.map((r, i) => (
+          <p key={i} style={{ fontSize: 12, color: '#991B1B', marginBottom: 4 }}>
+            <strong>{r.product_code}:</strong> {r.error}
+          </p>
+        ))}
+      </div>
+    )}
+  </div>
+)}
       </Modal>
 
 {/* ZIP Images Modal */}
