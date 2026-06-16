@@ -41,19 +41,6 @@ export default function ShippingPage() {
     return () => clearTimeout(t)
   }, [search])
 
-async function handleDownloadLabel(order: any) {
-  try {
-    const targetId = order.shiprocket_order_id
-    if (!targetId) throw new Error('No Shiprocket ID found.')
-    const res = await getLabel(targetId)
-    if (res.label?.label_url) window.open(res.label.label_url, '_blank')
-    if (res.manifest?.manifest_url) window.open(res.manifest.manifest_url, '_blank')
-    toast('Labels opened!', 'success')
-  } catch (e: any) {
-    toast(e.message || 'Failed to download label', 'error')
-  }
-}
-
   return (
     <>
       <div style={{ marginBottom: 20 }}>
@@ -67,12 +54,17 @@ async function handleDownloadLabel(order: any) {
         <div className="filter-search">
           <input type="text" placeholder="Search orders..." value={search} onChange={e => setSearch(e.target.value)} />
         </div>
-        <select className="flt-select" value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setPage(1) }}>
-          <option value="CONFIRMED">Ready to ship</option>
-          <option value="SHIPPED">Dispatched</option>
-          <option value="DELIVERED">Delivered</option>
-          <option value="">All orders</option>
-        </select>
+
+
+<select className="flt-select" value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setPage(1) }}>
+  <option value="">All orders</option>
+  <option value="CONFIRMED">Ready to ship</option>
+  <option value="SHIPPED">Dispatched</option>
+  <option value="DELIVERED">Delivered</option>
+</select>
+
+
+        
         <div style={{ marginLeft: 'auto', fontSize: 12, padding: '4px 12px', background: 'var(--cream-2)', borderRadius: 8 }}>
           {total} active shipments
         </div>
@@ -103,15 +95,37 @@ async function handleDownloadLabel(order: any) {
                   </td>
                   <td><Badge status={o.status} /></td>
                   <td style={{ fontSize: 12 }}>{o.shipping_address?.name}</td>
-                  <td style={{ textAlign: 'right' }}>
-                    {o.shiprocket_order_id ? (
-                      <button className="btn btn-sm" onClick={() => handleDownloadLabel(o)}>
-                        <Download size={12} />
-                      </button>
-                    ) : (
-                      <span style={{ fontSize: 11, color: 'var(--ink-4)' }}>Pending Auto-Sync</span>
-                    )}
-                  </td>
+
+
+
+<td style={{ textAlign: 'right' }}>
+  {o.shiprocket_order_id ? (
+    <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+      <button className="btn btn-sm" title="Print Label" onClick={async () => {
+        const newTab = window.open('about:blank', '_blank')
+        try {
+          const res = await getLabel(o.shiprocket_order_id)
+          if (res.label?.label_url && newTab) newTab.location.href = res.label.label_url
+          else { if (newTab) newTab.close(); throw new Error('Label not available') }
+        } catch (e: any) { if (newTab) newTab.close(); toast(e.message, 'error') }
+      }}>
+        <Download size={12} /> Label
+      </button>
+      <button className="btn btn-sm" title="Print Manifest" onClick={async () => {
+        const newTab = window.open('about:blank', '_blank')
+        try {
+          const res = await getLabel(o.shiprocket_order_id)
+          if (res.manifest?.manifest_url && newTab) newTab.location.href = res.manifest.manifest_url
+          else { if (newTab) newTab.close(); throw new Error('Manifest not available') }
+        } catch (e: any) { if (newTab) newTab.close(); toast(e.message, 'error') }
+      }}>
+        <Download size={12} /> Manifest
+      </button>
+    </div>
+  ) : (
+    <span style={{ fontSize: 11, color: 'var(--ink-4)' }}>Pending Auto-Sync</span>
+  )}
+</td>
                 </tr>
               ))}
             </tbody>

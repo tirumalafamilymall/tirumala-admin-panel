@@ -50,19 +50,6 @@ async function handleAssignShipping() {
     }
   }
 
-async function handlePrintLabel() {
-    setActionLoading(true)
-    try {
-      const res = await getLabel(order.shiprocket_order_id)
-      if (res.label?.label_url) window.open(res.label.label_url, '_blank')
-      if (res.manifest?.manifest_url) window.open(res.manifest.manifest_url, '_blank')
-    } catch (e: any) {
-      toast(e.message, 'error')
-    } finally {
-      setActionLoading(false)
-    }
-  }
-
   if (loading) return (
     <div style={{ display:'flex', justifyContent:'center', padding:100 }}>
       <Loader2 size={32} className="animate-spin" style={{ color:'var(--gold)' }} />
@@ -190,23 +177,84 @@ async function handlePrintLabel() {
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', gap: 10, flexDirection: 'column' }}>
-                  <button 
-                    className="btn" 
-                    style={{ width: '100%', justifyContent: 'center', background: '#1a1a1a', color: '#ffffff' }}
-                    onClick={handlePrintLabel} 
-                    disabled={actionLoading}
-                  >
-                    {actionLoading ? <Loader2 size={16} className="animate-spin" /> : <Printer size={16} />}
-                    {actionLoading ? ' Fetching Label...' : ' Print Shipping Label'}
-                  </button>
+<div style={{ display: 'flex', gap: 10, flexDirection: 'column' }}>
 
-                  {order.tracking_url && (
-                    <a href={order.tracking_url} target="_blank" className="btn btn-outline" style={{ width: '100%', justifyContent: 'center' }}>
-                      Track Shipment <ExternalLink size={12} style={{ marginLeft: 6 }} />
-                    </a>
-                  )}
-                </div>
+
+<button 
+  className="btn" 
+  style={{ width: '100%', justifyContent: 'center', background: '#1a1a1a', color: 'white' }} 
+  onClick={async () => {
+    setActionLoading(true)
+    
+    // 1. Open a blank tab IMMEDIATELY to bypass the pop-up blocker
+    const newTab = window.open('about:blank', '_blank')
+    
+    try {
+      // 2. Fetch the label from Shiprocket
+      const res = await getLabel(order.shiprocket_order_id)
+      
+      if (res.label?.label_url && newTab) {
+        // 3. Change the blank tab to the real label URL
+        newTab.location.href = res.label.label_url 
+      } else {
+        if (newTab) newTab.close() // Close the blank tab if there's no label
+        throw new Error('Label not available')
+      }
+    } catch (e: any) {
+      if (newTab) newTab.close() // Clean up the blank tab on error
+      toast(e.message, 'error')
+    } finally {
+      setActionLoading(false)
+    }
+  }}
+  disabled={actionLoading}
+>
+  {actionLoading ? <Loader2 size={16} className="animate-spin" /> : <Printer size={16} />}
+  Print Shipping Label
+</button>
+
+
+<button 
+  className="btn" 
+  style={{ width: '100%', justifyContent: 'center', background: '#1a1a1a', color: 'white' }} 
+  onClick={async () => {
+    setActionLoading(true)
+    
+    // 1. Open a blank tab IMMEDIATELY to bypass the pop-up blocker
+    const newTab = window.open('about:blank', '_blank')
+    
+    try {
+      // 2. Fetch the data from Shiprocket
+      const res = await getLabel(order.shiprocket_order_id)
+      
+      if (res.manifest?.manifest_url && newTab) {
+        // 3. Change the blank tab to the real manifest URL
+        newTab.location.href = res.manifest.manifest_url 
+      } else {
+        if (newTab) newTab.close() // Close the blank tab if there's no manifest
+        throw new Error('Manifest not available')
+      }
+    } catch (e: any) {
+      if (newTab) newTab.close() // Clean up the blank tab on error
+      toast(e.message, 'error')
+    } finally {
+      setActionLoading(false)
+    }
+  }}
+  disabled={actionLoading}
+>
+  {actionLoading ? <Loader2 size={16} className="animate-spin" /> : <Printer size={16} />}
+  Print Manifest
+</button>
+
+
+  {order.tracking_url && (
+    <a href={order.tracking_url} target="_blank" className="btn btn-outline" style={{ width: '100%', justifyContent: 'center' }}>
+      Track Shipment <ExternalLink size={12} style={{ marginLeft: 6 }} />
+    </a>
+  )}
+</div>
+
               </div>
             )}
           </div>
