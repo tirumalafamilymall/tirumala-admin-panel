@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { logoutAdmin, getAdminToken } from '@/lib/auth'
+import { getAuth, onAuthStateChanged } from 'firebase/auth'
+import { getApps } from 'firebase/app'
 
 type User = {
   email: string
@@ -87,15 +89,22 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   // ADD THIS: A loading state to prevent the "flash"
   const [isCheckingAuth, setIsCheckingAuth] = useState(true)
 
-  useEffect(() => {
-    // Check for token
-    if (!getAdminToken()) {
-      router.replace('/login')
-    } else {
-      // If token exists, reveal the dashboard
-      setIsCheckingAuth(false)
+useEffect(() => {
+  if (!getAdminToken()) {
+    router.replace('/login')
+    return
+  }
+
+  const auth = getAuth(getApps()[0])
+  const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+    if (firebaseUser) {
+      setUser({ email: firebaseUser.email || 'Admin', role: 'ADMIN' })
     }
-  }, [pathname, router])
+    setIsCheckingAuth(false)
+  })
+
+  return () => unsubscribe()
+}, [pathname, router])
 
   // ADD THIS: If we are still checking, or if there is no token, render nothing (or a loader)
   if (isCheckingAuth) {

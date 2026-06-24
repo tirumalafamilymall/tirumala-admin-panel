@@ -133,7 +133,7 @@ export default function ProductsPage() {
       
       if (!uploadUrl) throw new Error('Failed to get upload URL')
       
-      const uploadRes = await fetch(uploadUrl, { method: 'PUT', body: file, headers: { 'Content-Type': file.type,'x-amz-acl': 'public-read' } })
+      const uploadRes = await fetch(uploadUrl, { method: 'PUT', body: file, headers: { 'Content-Type': file.type } })
       if (!uploadRes.ok) throw new Error('Failed to upload file to cloud')
       
       setForm(prev => ({ ...prev, images: [publicUrl] }))
