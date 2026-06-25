@@ -485,11 +485,11 @@ async function handleZipUpload(file: File) {
                         }}
                         onClick={() => (p.image || p.images?.[0]) && setPreviewImage(p.image || p.images[0])}
                       >
-                        {p.image || p.images?.[0] ? (
-                          <img src={p.image || p.images[0]} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 6 }} />
-                        ) : (
-                          PROD_EMOJIS[p.category] || PROD_EMOJIS.default
-                        )}
+{p.image || p.images?.[0] ? (
+  <img src={p.image || p.images[0]} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 6 }} loading="lazy" />
+) : (
+  PROD_EMOJIS[p.category] || PROD_EMOJIS.default
+)}
                       </div>
                     </td>
 
