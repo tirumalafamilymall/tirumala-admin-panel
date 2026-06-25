@@ -475,22 +475,27 @@ async function handleZipUpload(file: File) {
                     onMouseLeave={e => { if (p.stock !== 0) (e.currentTarget as HTMLTableRowElement).style.background = '' }}
                   >
                     <td style={{ padding: '12px 14px', verticalAlign: 'middle' }}>
-                      <div
-                        className="prod-thumb"
-                        style={{
-                          width: 44,
-                          height: 44,
-                          background: p.stock === 0 ? '#FEF0F0' : 'var(--cream-2)',
-                          cursor: 'zoom-in',
-                        }}
-                        onClick={() => (p.image || p.images?.[0]) && setPreviewImage(p.image || p.images[0])}
-                      >
-{p.image || p.images?.[0] ? (
-  <img src={p.image || p.images[0]} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 6 }} loading="lazy" />
-) : (
-  PROD_EMOJIS[p.category] || PROD_EMOJIS.default
-)}
-                      </div>
+<div
+  className="prod-thumb"
+  style={{
+    width: 44,
+    height: 44,
+    background: p.stock === 0 ? '#FEF0F0' : 'var(--cream-2)',
+    cursor: 'zoom-in',
+  }}
+  onClick={() => (p.image || p.images?.[0]) && setPreviewImage(p.image || p.images[0])}
+>
+  {/* ✅ THIS IS THE CORRECT WAY TO RENDER THE IMAGE FOR THE CURRENT ROW */}
+  {p.image || p.images?.[0] ? (
+    <img 
+      src={p.image || p.images[0]} 
+      alt={p.name} 
+      style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 6 }} 
+    />
+  ) : (
+    <span style={{ fontSize: 20 }}>{PROD_EMOJIS[p.category] || PROD_EMOJIS.default}</span>
+  )}
+</div>
                     </td>
 
                     <td style={{ padding: '12px 14px', verticalAlign: 'middle' }}>

@@ -181,7 +181,7 @@ export default function InstaLivePage() {
                 {p.is_active && <div className="insta-live-badge">● LIVE</div>}
                 
                 {p.thumbnail?.includes('.mp4') ? (
-                  <video src={p.thumbnail} autoPlay loop muted style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.8 }} />
+                 <video src={p.thumbnail} autoPlay loop muted playsInline style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.8 }} />
                 ) : (
                   <img src={p.thumbnail} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.8 }} />
                 )}
@@ -223,7 +223,7 @@ export default function InstaLivePage() {
               <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
                 <div style={{ width: 80, height: 100, borderRadius: 6, overflow: 'hidden', border: '1px solid var(--border)' }}>
                   {form.thumbnail.includes('.mp4') ? (
-                    <video src={form.thumbnail} autoPlay loop muted style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <video src={form.thumbnail} autoPlay loop muted playsInline style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   ) : (
                     <img src={form.thumbnail} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   )}
