@@ -71,7 +71,7 @@ export default function ProductsPage() {
   const [categories, setCategories] = useState<string[]>([])
   
 
-  const PER_PAGE = 20
+  const PER_PAGE = 10
 
   const loadProducts = useCallback(async () => {
     setLoading(true)
@@ -122,28 +122,35 @@ export default function ProductsPage() {
 
   const [imageUploading, setImageUploading] = useState(false)
 
-  async function handleSingleImageUpload(file: File) {
-    setImageUploading(true)
-    try {
-      const token = getAdminToken()
-      const headers = { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) }
-      
-      const initRes = await fetch(`${API_BASE}/api/upload/presign?filename=${encodeURIComponent(file.name)}&type=${encodeURIComponent(file.type)}`, { headers })
-      const { uploadUrl, publicUrl } = await initRes.json()
-      
-      if (!uploadUrl) throw new Error('Failed to get upload URL')
-      
-      const uploadRes = await fetch(uploadUrl, { method: 'PUT', body: file, headers: { 'Content-Type': file.type } })
-      if (!uploadRes.ok) throw new Error('Failed to upload file to cloud')
-      
-      setForm(prev => ({ ...prev, images: [publicUrl] }))
-      toast('Image uploaded', 'success')
-    } catch (e: any) {
-      toast(e.message || 'Image upload failed', 'error')
-    } finally {
-      setImageUploading(false)
-    }
+async function handleSingleImageUpload(file: File) {
+  setImageUploading(true)
+  try {
+    const imageCompression = (await import('browser-image-compression')).default
+    const compressed = await imageCompression(file, {
+      maxSizeMB: 0.3,
+      maxWidthOrHeight: 1200,
+      useWebWorker: true,
+    })
+
+    const token = getAdminToken()
+    const headers = { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) }
+    
+    const initRes = await fetch(`${API_BASE}/api/upload/presign?filename=${encodeURIComponent(file.name)}&type=${encodeURIComponent(file.type)}`, { headers })
+    const { uploadUrl, publicUrl } = await initRes.json()
+    
+    if (!uploadUrl) throw new Error('Failed to get upload URL')
+    
+    const uploadRes = await fetch(uploadUrl, { method: 'PUT', body: compressed, headers: { 'Content-Type': file.type } })
+    if (!uploadRes.ok) throw new Error('Failed to upload file to cloud')
+    
+    setForm(prev => ({ ...prev, images: [publicUrl] }))
+    toast('Image uploaded', 'success')
+  } catch (e: any) {
+    toast(e.message || 'Image upload failed', 'error')
+  } finally {
+    setImageUploading(false)
   }
+}
 
 async function handleSave() {
     if (!validate()) return
@@ -317,6 +324,7 @@ async function handleZipUpload(file: File) {
       let failedCount = 0
 
       toast(`Uploading ${matched.length} images...`, 'info')
+      const imageCompression = (await import('browser-image-compression')).default
 
       const BATCH_SIZE = 20
       for (let i = 0; i < matched.length; i += BATCH_SIZE) {
@@ -326,12 +334,20 @@ async function handleZipUpload(file: File) {
           const fileData = extractedFiles.find(f => f.productCode === item.productCode)
           if (!fileData) return
 
+          
+
           try {
-            const uploadRes = await fetch(item.uploadUrl, {
-              method: 'PUT',
-              body: fileData.blob,
-              headers: { 'Content-Type': fileData.mimeType, 'x-amz-acl': 'public-read' },
-            })
+const compressedBlob = await imageCompression(new File([fileData.blob], fileData.fileName, { type: fileData.mimeType }), {
+  maxSizeMB: 0.3,
+  maxWidthOrHeight: 1200,
+  useWebWorker: true,
+})
+
+const uploadRes = await fetch(item.uploadUrl, {
+  method: 'PUT',
+  body: compressedBlob,
+  headers: { 'Content-Type': fileData.mimeType, 'x-amz-acl': 'public-read' },
+})
             
             if (uploadRes.ok) {
               successfulUploads.push({ 
@@ -487,11 +503,13 @@ async function handleZipUpload(file: File) {
 >
   {/* ✅ THIS IS THE CORRECT WAY TO RENDER THE IMAGE FOR THE CURRENT ROW */}
   {p.image || p.images?.[0] ? (
-    <img 
-      src={p.image || p.images[0]} 
-      alt={p.name} 
-      style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 6 }} 
-    />
+<img 
+  src={p.image || p.images[0]} 
+  alt={p.name} 
+  loading="lazy"
+  decoding="async"
+  style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 6 }} 
+/>
   ) : (
     <span style={{ fontSize: 20 }}>{PROD_EMOJIS[p.category] || PROD_EMOJIS.default}</span>
   )}

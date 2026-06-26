@@ -180,11 +180,24 @@ export default function InstaLivePage() {
               }}>
                 {p.is_active && <div className="insta-live-badge">● LIVE</div>}
                 
-                {p.thumbnail?.includes('.mp4') ? (
-                 <video src={p.thumbnail} autoPlay loop muted playsInline style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.8 }} />
-                ) : (
-                  <img src={p.thumbnail} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.8 }} />
-                )}
+{p.thumbnail?.includes('.mp4') ? (
+  <video 
+    src={p.thumbnail} 
+    loop 
+    muted 
+    playsInline
+    preload="metadata"
+    style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.8, cursor: 'pointer' }}
+    onMouseEnter={e => (e.currentTarget as HTMLVideoElement).play()}
+    onMouseLeave={e => { 
+      const v = e.currentTarget as HTMLVideoElement
+      v.pause()
+      v.currentTime = 0
+    }}
+  />
+) : (
+  <img src={p.thumbnail} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.8 }} />
+)}
 
               </div>
               <div className="insta-body">
